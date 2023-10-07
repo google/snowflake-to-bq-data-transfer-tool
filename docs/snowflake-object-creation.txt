@@ -1,0 +1,74 @@
+--Creating compute
+USE ROLE ACCOUNTADMIN;
+--Uncomment below command if you wanto drop any of the bwlo things
+-- drop role if exists MIGRATE_DATA_ROLE1;
+--  drop  storage integration if exists MIGRATION_INTEGRATION1;
+--  drop warehouse  if exists MIGRATION_WAREHOUSE1;
+--  drop file format  if exists TEST_DATABASE.PUBLIC.SF_GCS_CSV_FORMAT1;
+--  drop file format  if exists TEST_DATABASE.PUBLIC.SF_GCS_CSV_FORMAT1;
+--  drop user if exists MIGRATIONUSER1;
+--  drop SECURITY INTEGRATION if exists MIGRATION_SECURITY_INTEGRATION1;
+--  drop stage if exists TEST_DATABASE.PUBLIC.gcs_stage_copy_into_DATES_VALUE
+
+--This will help giving a special warehouse for the migration use case, user can choose their own configration
+CREATE WAREHOUSE MIGRATION_WAREHOUSE1
+  WAREHOUSE_SIZE = 'X-Small'
+  WAREHOUSE_TYPE = 'STANDARD'
+  AUTO_SUSPEND = 3
+  AUTO_RESUME = TRUE
+  MIN_CLUSTER_COUNT = 1
+  MAX_CLUSTER_COUNT = 2
+  SCALING_POLICY = 'STANDARD'
+  INITIALLY_SUSPENDED = FALSE;
+
+
+  -- Creating the integration, this gets used by all the stages which are created by the migrator code.
+CREATE STORAGE INTEGRATION MIGRATION_INTEGRATION1
+TYPE = EXTERNAL_STAGE
+STORAGE_PROVIDER = GCS
+ENABLED = TRUE
+STORAGE_ALLOWED_LOCATIONS  = ('gcs://snowflake-to-gcs-migration/');
+
+-- Describe the integration copy the value of STORAGE_GCP_SERVICE_ACCOUNT and give that account , StorageObjectAdmin and Storage Admin in GCP
+
+// create the file format which will be used in code by stages(TEST_DATABASE.PUBLIC is the database and schema which should be user defined)
+CREATE OR REPLACE FILE FORMAT TEST_DATABASE.PUBLIC.SF_GCS_CSV_FORMAT1 TYPE = CSV;
+
+-- Creating the role to be used
+CREATE role MIGRATE_DATA_ROLE1;
+
+-- In all the 5-6 command below TEST_DATABASE is used for database and PUBLIC is used for schema. Please replace with your database and schema.
+--This is needed so that role when assigned to user can see and work on database
+GRANT USAGE ON DATABASE TEST_DATABASE TO role MIGRATE_DATA_ROLE1;
+--This is needed to get access to the schema.
+GRANT USAGE ON SCHEMA TEST_DATABASE.public TO role MIGRATE_DATA_ROLE1;
+-- This will give access to all the table in the schema, other wise user does will not see tables even from UI.
+GRANT SELECT on all tables in database TEST_DATABASE TO ROLE MIGRATE_DATA_ROLE1;
+--This will help user see the futrue tables.
+GRANT SELECT on FUTURE TABLES IN SCHEMA TEST_DATABASE.public TO ROLE MIGRATE_DATA_ROLE1;
+--This is needed as we will use the future stages.
+GRANT USAGE on FUTURE STAGES IN DATABASE TEST_DATABASE TO ROLE MIGRATE_DATA_ROLE1;
+--This is needed as we are creating the stages in the database public schema.
+GRANT CREATE STAGE ON SCHEMA TEST_DATABASE.public TO ROLE MIGRATE_DATA_ROLE1;
+-- This is giving usage access on storage integration
+GRANT USAGE on INTEGRATION MIGRATION_INTEGRATION1 to role MIGRATE_DATA_ROLE1;
+-- This is giving usage access on the file format.
+GRANT usage ON file format TEST_DATABASE.PUBLIC.SF_GCS_CSV_FORMAT1 TO ROLE MIGRATE_DATA_ROLE1;
+-- This is giving usage access on warehouse
+GRANT USAGE ON WAREHOUSE MIGRATION_WAREHOUSE1 to role MIGRATE_DATA_ROLE1;
+-- Below command is creating the user with password and setting the default warehouse and role t be used by user.
+CREATE USER MIGRATIONUSER1 PASSWORD='Test@123' DEFAULT_WAREHOUSE='MIGRATION_WAREHOUSE1' DEFAULT_ROLE='MIGRATE_DATA_ROLE1';
+
+
+GRANT ROLE MIGRATE_DATA_ROLE1 TO USER MIGRATIONUSER1;
+-- Creating the OAuth related configuration
+CREATE OR REPLACE SECURITY INTEGRATION MIGRATION_SECURITY_INTEGRATION1
+  TYPE = OAUTH
+  ENABLED = TRUE
+  OAUTH_CLIENT = CUSTOM
+  OAUTH_CLIENT_TYPE = 'CONFIDENTIAL'
+  OAUTH_REDIRECT_URI = 'http://locahost:8080'
+  OAUTH_ISSUE_REFRESH_TOKENS = TRUE
+  --This is needed becasue we are using http url in OAUTH_REDIRECT_URI, in case hhtps url changes it to false which is default value.
+  OAUTH_ALLOW_NON_TLS_REDIRECT_URI=true
+  OAUTH_REFRESH_TOKEN_VALIDITY = 86400;

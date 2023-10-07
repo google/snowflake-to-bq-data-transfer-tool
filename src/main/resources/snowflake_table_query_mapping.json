@@ -1,0 +1,6 @@
+{
+  "DATES_VALUE": "select datecol, TO_CHAR(datetimecol, 'YYYY-MM-DD HH24:MI:SS')as datetimecol, TO_CHAR(timestampcol, 'YYYY-MM-DD HH24:MI:SS.FF9')as timestampcol from TEST_DATABASE.PUBLIC.DATES_VALUE",
+  "DATES_VALUE_2": "select datecol, TO_CHAR(datetimecol, 'YYYY-MM-DD HH24:MI:SS')as datetimecol, TO_CHAR(timestampcol, 'YYYY-MM-DD HH24:MI:SS.FF9')as timestampcol from TEST_DATABASE.PUBLIC.DATES_VALUE_2",
+  "DUMMY_DATA_18M":"select * from TEST_DATABASE.public.dummy_data_18m where datecol='2015-07-02'",
+  "ALL_DATATYPE": "select INTCOL,NUMCOL,DECIMALCOL,STRINGCOL,STRINGCOL2,BOOLCOL,DATECOL from ALL_DATATYPE "
+}

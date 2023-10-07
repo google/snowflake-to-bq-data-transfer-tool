@@ -1,0 +1,11 @@
+{
+  "UnloadDataRequest": {
+    "warehouse": "MIGRATION_WAREHOUSE1",
+    "statement": "CREATE or replace STAGE GCS_STAGE_COPY_INTO_%s STORAGE_INTEGRATION = MIGRATION_INTEGRATION1 URL = 'gcs://%s/%s' FILE_FORMAT = %s; COPY INTO @GCS_STAGE_COPY_INTO_%s/%s FROM %s  OVERWRITE=TRUE HEADER=TRUE",
+    "database": "TEST_DATABASE",
+    "schema": "PUBLIC",
+    "parameters": {
+      "MULTI_STATEMENT_COUNT": "2"
+    }
+  }
+}
