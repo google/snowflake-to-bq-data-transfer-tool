@@ -66,7 +66,7 @@ CREATE OR REPLACE SECURITY INTEGRATION MIGRATION_SECURITY_INTEGRATION1
   TYPE = OAUTH
   ENABLED = TRUE
   OAUTH_CLIENT = CUSTOM
-  OAUTH_CLIENT_TYPE = 'CONFIDENTIAL'
+  OAUTH_CLIENT_TYPE = <Appropriate Value>
   OAUTH_REDIRECT_URI = 'http://locahost:8080'
   OAUTH_ISSUE_REFRESH_TOKENS = TRUE
   --This is needed becasue we are using http url in OAUTH_REDIRECT_URI, in case hhtps url changes it to false which is default value.
