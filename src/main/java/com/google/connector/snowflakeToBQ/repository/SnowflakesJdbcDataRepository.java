@@ -80,7 +80,9 @@ public class SnowflakesJdbcDataRepository {
    */
   public void setJdbcTemplate(String databaseName, String schemaName) {
     if (jdbcTemplate == null) {
-      if (StringUtils.isEmpty(oauthCredentials.getOauthMap().get("accessToken"))) {
+      if (oauthCredentials.getOauthMap().get("accessToken") == null
+          || StringUtils.isEmpty(
+              oauthCredentials.getOauthMap().get("accessToken").getCiphertext())) {
         tokenRefreshService.refreshToken();
       }
       BasicDataSource dataSource = new BasicDataSource();

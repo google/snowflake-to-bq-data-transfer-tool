@@ -22,9 +22,6 @@ import java.time.format.DateTimeFormatter;
 /** Class which contains the common property and methods used across application */
 public class PropertyManager {
   public static DateTimeFormatter OUTPUT_FORMATTER = DateTimeFormatter.ofPattern("yyyy_MM_dd");
-  public static DateTimeFormatter OUTPUT__DATE_TIME_FORMATTER =
-      DateTimeFormatter.ofPattern("yyyy_MM_dd_HH_mm_ss");
-
   public static DateTimeFormatter OUTPUT_FORMATTER1 =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 

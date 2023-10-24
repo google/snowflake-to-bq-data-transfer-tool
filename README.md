@@ -269,7 +269,7 @@ curl --location --request POST 'http://localhost:8080/connector/snowflake-unload
 '
 
 ```
-* This rest API when executed will perform exporting of table data from Snowflake to GCS.
+* This REST API when executed will perform exporting of table data from Snowflake to GCS.
 
 # Process Failed Requests
 * **Request URL and Body**

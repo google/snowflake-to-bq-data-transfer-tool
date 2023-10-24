@@ -70,7 +70,11 @@ public class MigrationServiceInstanceCreator {
                 + " service account");
       }
     } catch (Exception e) {
-      throw new RuntimeException("Unable to create migration service instance");
+      String errorMessage =
+          String.format(
+              "Unable to create migration service instance. Error Message::%s", e.getMessage());
+      log.error(errorMessage);
+      throw new RuntimeException(errorMessage);
     }
   }
 

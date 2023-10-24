@@ -26,7 +26,7 @@ import com.google.connector.snowflakeToBQ.util.ErrorCode;
 import com.google.connector.snowflakeToBQ.util.encryption.EncryptValues;
 import lombok.Getter;
 import lombok.Setter;
-import net.snowflake.client.jdbc.internal.apache.tika.utils.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -80,7 +80,8 @@ public class SnowflakesService {
             snowflakeQuery);
     log.info("Snowflake Command to be executed from Rest API:{}", command);
 
-    if (StringUtils.isEmpty(oauthCredentials.getOauthMap().get("accessToken"))) {
+    if (oauthCredentials.getOauthMap().get("accessToken") == null
+        || StringUtils.isEmpty(oauthCredentials.getOauthMap().get("accessToken").getCiphertext())) {
       tokenRefreshService.refreshToken();
     }
     String accessToken =

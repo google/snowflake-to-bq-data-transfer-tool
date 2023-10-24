@@ -22,7 +22,9 @@ import static org.mockito.Mockito.when;
 import com.google.connector.snowflakeToBQ.base.AbstractTestBase;
 import com.google.connector.snowflakeToBQ.config.OAuthCredentials;
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
+import com.google.connector.snowflakeToBQ.model.EncryptedData;
 import com.google.connector.snowflakeToBQ.model.response.TokenResponse;
+import com.google.connector.snowflakeToBQ.util.CommonMethods;
 import com.google.connector.snowflakeToBQ.util.ErrorCode;
 import com.google.connector.snowflakeToBQ.util.encryption.EncryptValues;
 import java.util.HashMap;
@@ -32,7 +34,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.web.client.RestTemplate;
 
@@ -57,10 +58,25 @@ public class TokenRefreshServiceTest extends AbstractTestBase {
 
   @Test
   public void testTokenResponseIsNull() {
-    Map<String, String> dummyMapValue = new HashMap<>();
-    dummyMapValue.put("refreshToken", "test-token");
-    dummyMapValue.put("clientId", "client-id");
-    dummyMapValue.put("clientSecret", "client-secret");
+    Map<String, EncryptedData> dummyMapValue = new HashMap<>();
+    dummyMapValue.put(
+        "refreshToken",
+        new EncryptedData(
+            "test-token",
+            CommonMethods.generateSecretKey(),
+            CommonMethods.generateInitializationVector()));
+    dummyMapValue.put(
+        "clientId",
+        new EncryptedData(
+            "client-Id",
+            CommonMethods.generateSecretKey(),
+            CommonMethods.generateInitializationVector()));
+    dummyMapValue.put(
+        "clientSecret",
+        new EncryptedData(
+            "client-secret",
+            CommonMethods.generateSecretKey(),
+            CommonMethods.generateInitializationVector()));
     when(oauthCredentials.getOauthMap()).thenReturn(dummyMapValue);
     when(restTemplate.postForObject(anyString(), anyString(), eq(TokenResponse.class)))
         .thenReturn(null);
@@ -75,10 +91,25 @@ public class TokenRefreshServiceTest extends AbstractTestBase {
 
   @Test
   public void testGetAccessToken() {
-    Map<String, String> dummyMapValue = new HashMap<>();
-    dummyMapValue.put("refreshToken", "test-token");
-    dummyMapValue.put("clientId", "client-id");
-    dummyMapValue.put("clientSecret", "client-secret");
+    Map<String, EncryptedData> dummyMapValue = new HashMap<>();
+    dummyMapValue.put(
+        "refreshToken",
+        new EncryptedData(
+            "test-token",
+            CommonMethods.generateSecretKey(),
+            CommonMethods.generateInitializationVector()));
+    dummyMapValue.put(
+        "clientId",
+        new EncryptedData(
+            "client-Id",
+            CommonMethods.generateSecretKey(),
+            CommonMethods.generateInitializationVector()));
+    dummyMapValue.put(
+        "clientSecret",
+        new EncryptedData(
+            "client-secret",
+            CommonMethods.generateSecretKey(),
+            CommonMethods.generateInitializationVector()));
     when(oauthCredentials.getOauthMap()).thenReturn(dummyMapValue);
     TokenResponse tokenResponse = new TokenResponse();
     tokenResponse.setAccessToken("accessToken");
