@@ -22,11 +22,13 @@ import static org.mockito.Mockito.when;
 
 import com.google.connector.snowflakeToBQ.base.AbstractTestBase;
 import com.google.connector.snowflakeToBQ.config.OAuthCredentials;
+import com.google.connector.snowflakeToBQ.model.EncryptedData;
 import com.google.connector.snowflakeToBQ.model.request.SFDataMigrationRequestDTO;
 import com.google.connector.snowflakeToBQ.model.response.SFDataMigrationResponse;
 import com.google.connector.snowflakeToBQ.model.response.TokenResponse;
 import com.google.connector.snowflakeToBQ.service.SnowflakeMigrateDataService;
 import com.google.connector.snowflakeToBQ.service.TokenRefreshService;
+import com.google.connector.snowflakeToBQ.util.CommonMethods;
 import com.google.connector.snowflakeToBQ.util.encryption.EncryptValues;
 
 import java.util.ArrayList;
@@ -93,17 +95,21 @@ public class SnowflakesConnectorControllerTest extends AbstractTestBase {
   public void testEncryptValue() {
     Map<String, String> inputMap = new HashMap<>();
     inputMap.put("key", "unencryptvalue");
-    when(encryptValues.encryptValue(anyString())).thenReturn("testencrypt");
-    Map<String, String> returnedValue = snowflakesConnectorController.encryptValue(inputMap);
-    Assert.assertEquals("testencrypt", returnedValue.get("key"));
+    when(encryptValues.encryptValue(anyString()))
+        .thenReturn(
+            new EncryptedData("testencrypt", CommonMethods.generateSecretKey(), CommonMethods.generateInitializationVector()));
+    Map<String, EncryptedData> returnedValue = snowflakesConnectorController.encryptValue(inputMap);
+    Assert.assertEquals("testencrypt", returnedValue.get("key").getCiphertext());
   }
 
   @Test
   public void testEncryptAndSaveOAuthValue() {
     Map<String, String> inputMap = new HashMap<>();
     inputMap.put("key", "testencrypt");
-    when(encryptValues.encryptValue(anyString())).thenReturn("testencrypt");
+    when(encryptValues.encryptValue(anyString()))
+            .thenReturn(
+                    new EncryptedData("testencrypt", CommonMethods.generateSecretKey(), CommonMethods.generateInitializationVector()));
     snowflakesConnectorController.encryptAndSaveOAuthValue(inputMap);
-    Assert.assertEquals(inputMap, oAuthCredentials.getOauthMap());
+    Assert.assertEquals(inputMap.get("key"), oAuthCredentials.getOauthMap().get("key").getCiphertext());
   }
 }

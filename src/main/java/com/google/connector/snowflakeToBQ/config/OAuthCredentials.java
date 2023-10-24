@@ -18,18 +18,20 @@ package com.google.connector.snowflakeToBQ.config;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import com.google.connector.snowflakeToBQ.model.EncryptedData;
 import org.springframework.stereotype.Component;
 
 @Component
 public class OAuthCredentials {
-  private final Map<String, String> oauthMap = new HashMap<>();
+  private final Map<String, EncryptedData> oauthMap = new HashMap<>();
 
-  public Map<String, String> getOauthMap() {
+  public Map<String, EncryptedData> getOauthMap() {
     return oauthMap;
   }
 
   // Method to populate the shared map with user-dependent data
-  public void populateOauthMap(Map<String, String> data) {
+  public void populateOauthMap(Map<String, EncryptedData> data) {
     oauthMap.putAll(data);
   }
 }

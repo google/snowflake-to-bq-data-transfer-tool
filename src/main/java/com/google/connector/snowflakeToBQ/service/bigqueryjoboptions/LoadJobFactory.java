@@ -33,7 +33,7 @@ public class LoadJobFactory {
         return new ParquetLoadJob(parameter);
       default:
         throw new IllegalArgumentException(
-            "Invalid load option, not yet define in the factory: " + option);
+            "Invalid load option, not yet defined in the factory: " + option);
     }
   }
 }

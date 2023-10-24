@@ -19,6 +19,7 @@ package com.google.connector.snowflakeToBQ.controller;
 import static com.google.connector.snowflakeToBQ.util.PropertyManager.OUTPUT_FORMATTER1;
 
 import com.google.connector.snowflakeToBQ.config.OAuthCredentials;
+import com.google.connector.snowflakeToBQ.model.EncryptedData;
 import com.google.connector.snowflakeToBQ.model.OperationResult;
 import com.google.connector.snowflakeToBQ.model.request.SFDataMigrationRequestDTO;
 import com.google.connector.snowflakeToBQ.model.request.SFExtractAndTranslateDDLRequestDTO;
@@ -232,7 +233,7 @@ public class SnowflakesConnectorController {
       @RequestBody @NotNull @Size(min = 1) Map<String, String> credentialsData) {
     MDC.put(REQUEST_LOG_ID, UUID.randomUUID().toString());
 
-    Map<String, String> encryptedMap = new HashMap<>();
+    Map<String, EncryptedData> encryptedMap = new HashMap<>();
     for (Map.Entry<String, String> entry : credentialsData.entrySet()) {
       encryptedMap.put(entry.getKey(), encryptValues.encryptValue(entry.getValue()));
     }
@@ -273,23 +274,23 @@ public class SnowflakesConnectorController {
   }
 
   /**
-   * Method to encrypt any received valus in map. It then returns the encrypted value to the called.
+   * Method to encrypt any received values in map. It then returns the encrypted value to the called.
    *
    * @param data Map containing the values to be encrypted
    * @return encrypted value map.
    */
   @PostMapping("/encrypt-values")
-  public Map<String, String> encryptValue(
+  public Map<String, EncryptedData> encryptValue(
       @RequestBody @NotNull @Size(min = 1) Map<String, String> data) {
     MDC.put(REQUEST_LOG_ID, UUID.randomUUID().toString());
 
-    Map<String, String> encryptedMap = new HashMap<>();
+    Map<String, EncryptedData> encryptedMap = new HashMap<>();
     for (Map.Entry<String, String> entry : data.entrySet()) {
       log.info("Key:{}, Value:{}", entry.getKey(), entry.getValue());
       encryptedMap.put(entry.getKey(), encryptValues.encryptValue(entry.getValue()));
     }
     log.info(
-        "Received valus encryption completed at {}",
+        "Received values encryption completed at {}",
         PropertyManager.getDateInDesiredFormat(LocalDateTime.now(), OUTPUT_FORMATTER1));
     MDC.remove(REQUEST_LOG_ID);
     return encryptedMap;

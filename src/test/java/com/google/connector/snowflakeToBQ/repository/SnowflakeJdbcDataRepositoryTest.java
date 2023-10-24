@@ -23,9 +23,12 @@ import static org.mockito.Mockito.when;
 import com.google.connector.snowflakeToBQ.base.AbstractTestBase;
 import com.google.connector.snowflakeToBQ.config.OAuthCredentials;
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
+import com.google.connector.snowflakeToBQ.model.EncryptedData;
 import com.google.connector.snowflakeToBQ.model.response.TokenResponse;
 import com.google.connector.snowflakeToBQ.service.TokenRefreshService;
+import com.google.connector.snowflakeToBQ.util.CommonMethods;
 import com.google.connector.snowflakeToBQ.util.ErrorCode;
+
 import java.util.*;
 import org.junit.Assert;
 import org.junit.Before;
@@ -36,9 +39,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
-/**
- * Test file for {@link SnowflakesJdbcDataRepository} class
- */
+/** Test file for {@link SnowflakesJdbcDataRepository} class */
 public class SnowflakeJdbcDataRepositoryTest extends AbstractTestBase {
 
   @Autowired SnowflakesJdbcDataRepository applicationConfigDataService;
@@ -95,8 +96,14 @@ public class SnowflakeJdbcDataRepositoryTest extends AbstractTestBase {
       applicationConfigDataService.setJdbcTemplate(null);
       when(template.query(anyString(), eq(rowMapperMock))).thenReturn(expectedTableNames);
 
-      Map<String, String> dummyMapValue = new HashMap<>();
-      dummyMapValue.put("accessToken", "tests");
+      Map<String, EncryptedData> dummyMapValue = new HashMap<>();
+
+      EncryptedData encryptedData =
+          new EncryptedData(
+              "tests",
+              CommonMethods.generateSecretKey(),
+              CommonMethods.generateInitializationVector());
+      dummyMapValue.put("accessToken", encryptedData);
       when(oauthCredentials.getOauthMap()).thenReturn(dummyMapValue);
 
       List<String> actualTableNames = applicationConfigDataService.getAllTableNames("public");
@@ -116,8 +123,14 @@ public class SnowflakeJdbcDataRepositoryTest extends AbstractTestBase {
 
       when(template.query(anyString(), eq(rowMapperMock))).thenReturn(expectedTableNames);
       when(tokenRefreshService.refreshToken()).thenReturn(new TokenResponse());
-      Map<String, String> dummyMapValue = new HashMap<>();
-      dummyMapValue.put("accessToken", "tests");
+      Map<String, EncryptedData> dummyMapValue = new HashMap<>();
+
+      EncryptedData encryptedData =
+          new EncryptedData(
+              "tests",
+              CommonMethods.generateSecretKey(),
+              CommonMethods.generateInitializationVector());
+      dummyMapValue.put("accessToken", encryptedData);
       when(oauthCredentials.getOauthMap()).thenReturn(dummyMapValue);
 
       List<String> actualTableNames = applicationConfigDataService.getAllTableNames("public");

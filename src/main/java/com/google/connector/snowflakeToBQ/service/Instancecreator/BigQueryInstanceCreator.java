@@ -65,7 +65,10 @@ public class BigQueryInstanceCreator {
                 + " account");
       }
     } catch (Exception e) {
-      throw new RuntimeException("Unable to create BigQuery instance");
+      String errorMessage =
+          String.format("Unable to create BigQuery instance. Error Message::%s", e.getMessage());
+      log.error(errorMessage);
+      throw new RuntimeException(errorMessage);
     }
   }
 

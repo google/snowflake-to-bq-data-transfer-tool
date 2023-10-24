@@ -19,7 +19,7 @@ package com.google.connector.snowflakeToBQ.service.bigqueryjoboptions;
 import com.google.cloud.bigquery.LoadJobConfiguration;
 import com.google.cloud.bigquery.TableId;
 
-/** Class to help implementing the factory patter for LoadOption. */
+/** Class to help implementing the factory pattern for LoadOption. */
 public interface LoadJobOptions {
 
   LoadJobConfiguration createLoadJob(TableId tableId, String sourceURI);
