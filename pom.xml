@@ -20,7 +20,7 @@ limitations under the License.
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.google.connector</groupId>
     <artifactId>snowflake-to-bq-data-transfer</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>snowflake-to-bq-data-transfer</name>
     <description>This project helps in migrating Snowflake Table Data to BigQuery</description>
     <properties>
