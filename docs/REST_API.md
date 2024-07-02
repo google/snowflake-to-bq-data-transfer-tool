@@ -8,7 +8,7 @@
 
 
 ## Setting Access Token
-* Refresh Token generated from the step [Setting up authentication](#setting-up-authentication) should be set in the connector, \
+* Refresh Token generated from the step [Setting up authentication](../README.md#setting-up-authentication) present in file(**docs/README.md**) should be set in the connector, \
   connector will automatically keep on refreshing it until the max expiry of refresh token. Connector keeps the value in encrypted format in a map.
 * Request URL and body
 ```
