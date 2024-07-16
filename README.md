@@ -1,8 +1,8 @@
-# Snowflake To BigQuery Data Transfer User Guide [STBQDT]
+# Snowflake To BigQuery Data Transfer User Guide [SFBQDT]
 
-* For STBQDT detailed documentation, please refer to [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md)
-* For STBQDT supported APIs details, please refer to [docs/REST_API.md](docs/REST_API.md)
-* For STBQDT supported/non-supported datatype, please refer to [docs/DATATYPES.md](docs/DATATYPES.md)
+* For SFBQDT detailed documentation, please refer to [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md)
+* For SFBQDT supported APIs details, please refer to [docs/REST_API.md](docs/REST_API.md)
+* For SFBQDT supported/non-supported datatype, please refer to [docs/DATATYPES.md](docs/DATATYPES.md)
 
 
 This tool helps in transferring(migrating) the Snowflake data(Schema,Table) to BigQuery. \
@@ -92,7 +92,7 @@ java -jar {PATH OF JAR } --snowflake.table.query.mapping.path=/Users/tests/snowf
 * Once the tool is started, it can accept rest calls. User can use postman or curl command to execute the rest API calls.
 
 ## APIs
-STBQDT provides different APIs for data transfer,for detailed information please refer to [docs/REST_API.md](docs/REST_API.md)
+SFBQDT provides different APIs for data transfer,for detailed information please refer to [docs/REST_API.md](docs/REST_API.md)
 
 
 ## State Management
