@@ -1,12 +1,12 @@
-# Snowflake To BigQuery Data Transfer Supported Datatype Guide [STBQDT]
+# Snowflake To BigQuery Data Transfer Supported Datatype Guide [SFBQDT]
 
-* For STBQDT introduction, please refer to [/README.md](../README.md)
-* For STBQDT detailed documentation, please refer to [/DOCUMENTATION.md](DOCUMENTATION.md)
-* For STBQDT supported APIs details, please refer to [/REST_API.md](REST_API.md)
+* For SFBQDT introduction, please refer to [/README.md](../README.md)
+* For SFBQDT detailed documentation, please refer to [/DOCUMENTATION.md](DOCUMENTATION.md)
+* For SFBQDT supported APIs details, please refer to [/REST_API.md](REST_API.md)
 
 ## 1. Supported Data Types
 
-Presently, STBQDT supports below-mentioned data type for Parquet and CSV format,means user can export data in either of CSV or Parquet format.
+Presently, SFBQDT supports below-mentioned data type for Parquet and CSV format,means user can export data in either of CSV or Parquet format.
 
 | Snowflake Data Type | PARQUET | CSV |
 |----------------------|---------|-----|
@@ -38,7 +38,7 @@ Presently, STBQDT supports below-mentioned data type for Parquet and CSV format,
 
 ## 2. Supported Data Types With Fix
 
-Presently, STBQDT does not provide support for the following datatype in both CSV and Parquet formats out of the box. However, 
+Presently, SFBQDT does not provide support for the following datatype in both CSV and Parquet formats out of the box. However, 
 with some adjustments, it can function for a particular format
 
 | Snowflake Data Type | PARQUET                                                                                                                                                                                                                                                                 | CSV                                             |

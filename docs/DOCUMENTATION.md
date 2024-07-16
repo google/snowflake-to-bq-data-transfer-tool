@@ -1,8 +1,8 @@
-# Snowflake To BigQuery Data Transfer Detailed Documentation [STBQDT]
+# Snowflake To BigQuery Data Transfer Detailed Documentation [SFBQDT]
 
-* For STBQDT introduction, please refer to [/README.md](../README.md)
-* For STBQDT supported APIs details, please refer to [/REST_API.md](REST_API.md)
-* For STBQDT supported/non-supported datatype, please refer to [/DATATYPES.md](DATATYPES.md)
+* For SFBQDT introduction, please refer to [/README.md](../README.md)
+* For SFBQDT supported APIs details, please refer to [/REST_API.md](REST_API.md)
+* For SFBQDT supported/non-supported datatype, please refer to [/DATATYPES.md](DATATYPES.md)
 
 # 1. Architecture
 
