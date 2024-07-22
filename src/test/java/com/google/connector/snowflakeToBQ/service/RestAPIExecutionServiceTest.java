@@ -16,13 +16,12 @@
 
 package com.google.connector.snowflakeToBQ.service;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-
 import com.google.connector.snowflakeToBQ.base.AbstractTestBase;
+import com.google.connector.snowflakeToBQ.config.OAuthCredentials;
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
-import java.util.HashMap;
-import java.util.Map;
+import com.google.connector.snowflakeToBQ.model.EncryptedData;
+import com.google.connector.snowflakeToBQ.util.CommonMethods;
+import com.google.connector.snowflakeToBQ.util.encryption.EncryptValues;
 import lombok.Setter;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,11 +31,20 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+
 @Setter
 public class RestAPIExecutionServiceTest extends AbstractTestBase {
   @Autowired private RestAPIExecutionService restAPIExecutionService;
 
   @MockBean WebClient webClientMock;
+  @MockBean OAuthCredentials oauthCredentials;
+  @MockBean EncryptValues encryptDecryptValues;
+  @MockBean TokenRefreshService tokenRefreshService;
 
   /**
    * This test validates the positive condition of the flow where the mocked value returned in such
@@ -45,6 +53,15 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
    */
   @Test
   public void testPollDataLoadStatusSuccessFullInFirstExecution() {
+
+    Map<String, EncryptedData> map = new HashMap<>();
+    map.put(
+        "accessToken",
+        new EncryptedData(
+            "xyzserve",
+            CommonMethods.generateSecretKey(),
+            CommonMethods.generateInitializationVector()));
+
     // Create mock objects for the other WebClient classes
     WebClient.RequestHeadersUriSpec requestHeadersUriSpecMock =
         Mockito.mock(WebClient.RequestHeadersUriSpec.class);
@@ -53,6 +70,8 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
     WebClient.ResponseSpec responseSpecMock = Mockito.mock(WebClient.ResponseSpec.class);
     Mono<String> monoMock = Mockito.mock(Mono.class);
 
+    Mockito.when(oauthCredentials.getOauthMap()).thenReturn(map);
+    Mockito.when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("ver:01iwubsa");
     // Define the expected argument values for the method chain
     String expectedUrl = "https://testing.snowflakecomputing.com/api/v2/statements/";
     // Stub the behavior of the WebClient instance and its method chain
@@ -71,7 +90,7 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
 
     boolean returnResponse =
         restAPIExecutionService.pollWithTimeout(
-            expectedUrl, "01ad2571-0404-9a8c-84870006f0d2", "ver:1123adbsjdhgsad");
+            expectedUrl, "01ad2571-0404-9a8c-84870006f0d2");
     Assert.assertTrue(returnResponse);
   }
 
@@ -85,6 +104,13 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
    */
   @Test
   public void testPollDataLoadStatusWaitingAndMaxAttemptFinish() {
+    Map<String, EncryptedData> map = new HashMap<>();
+    map.put(
+            "accessToken",
+            new EncryptedData(
+                    "xyzserve",
+                    CommonMethods.generateSecretKey(),
+                    CommonMethods.generateInitializationVector()));
     // Create mock objects for the other WebClient classes
     WebClient.RequestHeadersUriSpec requestHeadersUriSpecMock =
         Mockito.mock(WebClient.RequestHeadersUriSpec.class);
@@ -92,6 +118,9 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
         Mockito.mock(WebClient.RequestHeadersSpec.class);
     WebClient.ResponseSpec responseSpecMock = Mockito.mock(WebClient.ResponseSpec.class);
     Mono<String> monoMock = Mockito.mock(Mono.class);
+
+    Mockito.when(oauthCredentials.getOauthMap()).thenReturn(map);
+    Mockito.when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("ver:01iwubsa");
 
     // Define the expected argument values for the method chain
     String expectedUrl = "https://testing.snowflakecomputing.com/api/v2/statements/";
@@ -114,7 +143,7 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
 
     boolean returnResponse =
         restAPIExecutionService.pollWithTimeout(
-            expectedUrl, "01ad2571-0404-9a8c-84870006f0d2", "ver:1123adbsjdhgsad");
+            expectedUrl, "01ad2571-0404-9a8c-84870006f0d2");
     Assert.assertFalse(returnResponse);
   }
 
@@ -129,6 +158,14 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
    */
   @Test
   public void testPollDataLoadStatusWaitingAndFinishWithInMaxAttempt() {
+
+    Map<String, EncryptedData> map = new HashMap<>();
+    map.put(
+            "accessToken",
+            new EncryptedData(
+                    "xyzserve",
+                    CommonMethods.generateSecretKey(),
+                    CommonMethods.generateInitializationVector()));
     // Create mock objects for the other WebClient classes
     WebClient.RequestHeadersUriSpec requestHeadersUriSpecMock =
         Mockito.mock(WebClient.RequestHeadersUriSpec.class);
@@ -136,6 +173,9 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
         Mockito.mock(WebClient.RequestHeadersSpec.class);
     WebClient.ResponseSpec responseSpecMock = Mockito.mock(WebClient.ResponseSpec.class);
     Mono<String> monoMock = Mockito.mock(Mono.class);
+
+    Mockito.when(oauthCredentials.getOauthMap()).thenReturn(map);
+    Mockito.when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("ver:01iwubsa");
 
     // Define the expected argument values for the method chain
     String expectedUrl = "https://testing.snowflakecomputing.com/api/v2/statements/";
@@ -169,7 +209,7 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
     long startTime = System.currentTimeMillis();
     boolean returnResponse =
         restAPIExecutionService.pollWithTimeout(
-            expectedUrl, "01ad2571-0404-9a8c-84870006f0d2", "ver:1123adbsjdhgsad");
+            expectedUrl, "01ad2571-0404-9a8c-84870006f0d2");
     long totalTime = System.currentTimeMillis() - startTime;
     Assert.assertTrue(returnResponse);
     // Here we are also asserting that total time taken in processing should be less than the given
@@ -187,6 +227,13 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
    */
   @Test
   public void testPollDataLoadStatusAndParseStatus() {
+
+    Map<String, EncryptedData> map = new HashMap<>();
+    map.put(
+            "accessToken",
+            new EncryptedData(
+                    "", CommonMethods.generateSecretKey(), CommonMethods.generateInitializationVector()));
+
     // Create mock objects for the other WebClient classes
     WebClient.RequestHeadersUriSpec requestHeadersUriSpecMock =
         Mockito.mock(WebClient.RequestHeadersUriSpec.class);
@@ -194,6 +241,10 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
         Mockito.mock(WebClient.RequestHeadersSpec.class);
     WebClient.ResponseSpec responseSpecMock = Mockito.mock(WebClient.ResponseSpec.class);
     Mono<String> monoMock = Mockito.mock(Mono.class);
+
+    // This is testing the negative scenario of the checkAndRefreshToken(), where the access token is empty and map is not null.
+    Mockito.when(oauthCredentials.getOauthMap()).thenReturn(map);
+    Mockito.when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("ver:01iwubsa");
 
     // Define the expected argument values for the method chain
     String expectedUrl = "https://testing.snowflakecomputing.com/api/v2/statements/";
@@ -215,7 +266,7 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
 
     boolean returnResponse =
         restAPIExecutionService.pollWithTimeout(
-            expectedUrl, "01ad2571-0404-9a8c-84870006f0d2", "ver:1123adbsjdhgsad");
+            expectedUrl, "01ad2571-0404-9a8c-84870006f0d2");
     Assert.assertTrue(returnResponse);
   }
 
@@ -254,7 +305,7 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
 
     boolean returnResponse =
         restAPIExecutionService.pollWithTimeout(
-            expectedUrl, "01ad2571-0404-9a8c-84870006f0d2", "ver:1123adbsjdhgsad");
+            expectedUrl, "01ad2571-0404-9a8c-84870006f0d2");
     Assert.assertTrue(returnResponse);
   }
 }

@@ -16,22 +16,11 @@
 
 package com.google.connector.snowflakeToBQ.service;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
-
 import com.google.connector.snowflakeToBQ.base.AbstractTestBase;
-import com.google.connector.snowflakeToBQ.config.OAuthCredentials;
 import com.google.connector.snowflakeToBQ.config.SnowflakeConfigLoader;
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
-import com.google.connector.snowflakeToBQ.model.EncryptedData;
 import com.google.connector.snowflakeToBQ.model.response.SnowflakeResponse;
-import com.google.connector.snowflakeToBQ.util.CommonMethods;
 import com.google.connector.snowflakeToBQ.util.ErrorCode;
-import com.google.connector.snowflakeToBQ.util.encryption.EncryptValues;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,6 +29,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import reactor.core.publisher.Mono;
 
+import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
+
 public class SnowflakesServiceTest extends AbstractTestBase {
   private static final Logger log = LoggerFactory.getLogger(SnowflakesServiceTest.class);
 
@@ -47,11 +41,6 @@ public class SnowflakesServiceTest extends AbstractTestBase {
   @MockBean RestAPIExecutionService restAPIExecutionService;
 
   @MockBean SnowflakeConfigLoader snowflakeConfigLoader;
-
-  @MockBean OAuthCredentials oauthCredentials;
-  @MockBean EncryptValues encryptDecryptValues;
-
-  @MockBean TokenRefreshService tokenRefreshService;
 
   String requestBody =
       "{\n"
@@ -71,27 +60,14 @@ public class SnowflakesServiceTest extends AbstractTestBase {
     snowflakesService =
         new SnowflakesService(
             restAPIExecutionService,
-            snowflakeConfigLoader,
-            oauthCredentials,
-            encryptDecryptValues,
-            tokenRefreshService);
+            snowflakeConfigLoader);
   }
 
   @Test()
   public void testExecuteUnloadDataCommandEmptyResponse() {
     Mono<SnowflakeResponse> s = Mono.just(new SnowflakeResponse());
-    Map<String, EncryptedData> map = new HashMap<>();
-    map.put(
-        "accessToken",
-        new EncryptedData(
-            "xyzserve",
-            CommonMethods.generateSecretKey(),
-            CommonMethods.generateInitializationVector()));
-
     when(snowflakeConfigLoader.getSnowflakeUnloadRequestBody(anyString())).thenReturn(requestBody);
-    when(oauthCredentials.getOauthMap()).thenReturn(map);
-    when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("ver:01iwubsa");
-    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString(), anyString()))
+    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString()))
         .thenReturn(s);
     when(snowflakeConfigLoader.getQuery("test")).thenReturn("select * from test");
     try {
@@ -112,17 +88,9 @@ public class SnowflakesServiceTest extends AbstractTestBase {
     log.info(
         sf.getMessage() + " " + sf.getRequestId() + " " + sf.getSqlState() + " " + sf.toString());
     Mono<SnowflakeResponse> responseMono = Mono.just(sf);
-    Map<String, EncryptedData> map = new HashMap<>();
-    map.put(
-        "accessToken",
-        new EncryptedData(
-            "xyzserve",
-            CommonMethods.generateSecretKey(),
-            CommonMethods.generateInitializationVector()));
+
     when(snowflakeConfigLoader.getSnowflakeUnloadRequestBody(anyString())).thenReturn(requestBody);
-    when(oauthCredentials.getOauthMap()).thenReturn(map);
-    when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("ver:01iwubsa");
-    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString(), anyString()))
+    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString()))
         .thenReturn(responseMono);
     when(snowflakeConfigLoader.getQuery("test")).thenReturn("select * from test");
     try {
@@ -137,17 +105,9 @@ public class SnowflakesServiceTest extends AbstractTestBase {
   @Test()
   public void testExecuteUnloadDataCommandEmptyResponseEmptyTableMap() {
     Mono<SnowflakeResponse> s = Mono.just(new SnowflakeResponse());
-    Map<String, EncryptedData> map = new HashMap<>();
-    map.put(
-        "accessToken",
-        new EncryptedData(
-            "xyzserve",
-            CommonMethods.generateSecretKey(),
-            CommonMethods.generateInitializationVector()));
+
     when(snowflakeConfigLoader.getSnowflakeUnloadRequestBody(anyString())).thenReturn(requestBody);
-    when(oauthCredentials.getOauthMap()).thenReturn(map);
-    when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("ver:01iwubsa");
-    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString(), anyString()))
+    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString()))
         .thenReturn(s);
     when(snowflakeConfigLoader.getQuery("test")).thenReturn("select * from test");
     try {
@@ -163,17 +123,9 @@ public class SnowflakesServiceTest extends AbstractTestBase {
   public void testExecuteUnloadDataCommandNullResponse() {
 
     Mono<SnowflakeResponse> responseMono = Mono.just(new SnowflakeResponse());
-    Map<String, EncryptedData> map = new HashMap<>();
-    map.put(
-        "accessToken",
-        new EncryptedData(
-            "xyzserve",
-            CommonMethods.generateSecretKey(),
-            CommonMethods.generateInitializationVector()));
+
     when(snowflakeConfigLoader.getSnowflakeUnloadRequestBody(anyString())).thenReturn(requestBody);
-    when(oauthCredentials.getOauthMap()).thenReturn(map);
-    when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("ver:01iwubsa");
-    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString(), anyString()))
+    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString()))
         .thenReturn(responseMono)
         .thenReturn(Mono.empty());
     when(snowflakeConfigLoader.getQuery("test")).thenReturn("select * from test");
@@ -193,19 +145,11 @@ public class SnowflakesServiceTest extends AbstractTestBase {
     sf.setStatementHandle(statementHandle);
     sf.setMessage("Statement executed successfully.");
     Mono<SnowflakeResponse> responseMono = Mono.just(sf);
-    Map<String, EncryptedData> map = new HashMap<>();
-    map.put(
-        "accessToken",
-        new EncryptedData(
-            "xyzserve",
-            CommonMethods.generateSecretKey(),
-            CommonMethods.generateInitializationVector()));
+
     when(snowflakeConfigLoader.getSnowflakeUnloadRequestBody(anyString())).thenReturn(requestBody);
-    when(oauthCredentials.getOauthMap()).thenReturn(map);
-    when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("ver:01iwubsa");
-    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString(), anyString()))
+    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString()))
         .thenReturn(responseMono);
-    when(restAPIExecutionService.pollWithTimeout(anyString(), anyString(), anyString()))
+    when(restAPIExecutionService.pollWithTimeout(anyString(), anyString()))
         .thenReturn(true);
     String returnValue =
         snowflakesService.executeUnloadDataCommand("test", "gs:/bucket/test", "SF_GCS_CSV_FORMAT1");
@@ -219,19 +163,11 @@ public class SnowflakesServiceTest extends AbstractTestBase {
     sf.setStatementHandle(statementHandle);
     sf.setMessage("Statement executed successfully");
     Mono<SnowflakeResponse> responseMono = Mono.just(sf);
-    Map<String, EncryptedData> map = new HashMap<>();
-    map.put(
-        "accessToken",
-        new EncryptedData(
-            "xyzserve",
-            CommonMethods.generateSecretKey(),
-            CommonMethods.generateInitializationVector()));
+
     when(snowflakeConfigLoader.getSnowflakeUnloadRequestBody(anyString())).thenReturn(requestBody);
-    when(oauthCredentials.getOauthMap()).thenReturn(map);
-    when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("ver:01iwubsa");
-    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString(), anyString()))
+    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString()))
         .thenReturn(responseMono);
-    when(restAPIExecutionService.pollWithTimeout(anyString(), anyString(), anyString()))
+    when(restAPIExecutionService.pollWithTimeout(anyString(), anyString()))
         .thenReturn(true);
     String returnValue =
         snowflakesService.executeUnloadDataCommand("test", "gs:/bucket/test", "SF_GCS_CSV_FORMAT1");
@@ -245,17 +181,11 @@ public class SnowflakesServiceTest extends AbstractTestBase {
     sf.setStatementHandle(statementHandle);
     sf.setMessage("Statement executed successfully");
     Mono<SnowflakeResponse> responseMono = Mono.just(sf);
-    Map<String, EncryptedData> map = new HashMap<>();
-    map.put(
-        "accessToken",
-        new EncryptedData(
-            "", CommonMethods.generateSecretKey(), CommonMethods.generateInitializationVector()));
+
     when(snowflakeConfigLoader.getSnowflakeUnloadRequestBody(anyString())).thenReturn(requestBody);
-    when(oauthCredentials.getOauthMap()).thenReturn(map);
-    when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("ver:01iwubsa");
-    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString(), anyString()))
+    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString()))
         .thenReturn(responseMono);
-    when(restAPIExecutionService.pollWithTimeout(anyString(), anyString(), anyString()))
+    when(restAPIExecutionService.pollWithTimeout(anyString(), anyString()))
         .thenReturn(false);
     try {
       String returnValue =

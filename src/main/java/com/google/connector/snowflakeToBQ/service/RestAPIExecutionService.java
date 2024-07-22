@@ -21,10 +21,14 @@ import static com.google.connector.snowflakeToBQ.util.ErrorCode.SNOWFLAKE_REST_A
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.connector.snowflakeToBQ.config.OAuthCredentials;
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
 import com.google.connector.snowflakeToBQ.model.response.SnowflakeResponse;
 import java.time.Duration;
 import java.util.Map;
+
+import com.google.connector.snowflakeToBQ.util.encryption.EncryptValues;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,6 +52,10 @@ public class RestAPIExecutionService {
   private static final Logger log = LoggerFactory.getLogger(RestAPIExecutionService.class);
 
   final WebClient webClient;
+  private final OAuthCredentials oauthCredentials;
+  private final EncryptValues encryptDecryptValues;
+  private final TokenRefreshService tokenRefreshService;
+
 
   @Value("${snowflake.rest.api.max.attempt}")
   private int snowflakeRestAPIMaxAttempt;
@@ -55,8 +63,15 @@ public class RestAPIExecutionService {
   @Value("${snowflake.rest.api.poll.duration}")
   private int snowflakeRestAPIPollDuration;
 
-  public RestAPIExecutionService(WebClient webClient) {
+  public RestAPIExecutionService(
+      WebClient webClient,
+      OAuthCredentials oauthCredentials,
+      EncryptValues encryptDecryptValues,
+      TokenRefreshService tokenRefreshService) {
     this.webClient = webClient;
+    this.oauthCredentials = oauthCredentials;
+    this.encryptDecryptValues = encryptDecryptValues;
+    this.tokenRefreshService = tokenRefreshService;
   }
 
   /**
@@ -64,11 +79,12 @@ public class RestAPIExecutionService {
    *
    * @param url Endpoint request URL
    * @param requestBody body of the request
-   * @param accessToken OAuth access token
    * @return SnowflakeResponse object
    */
-  public Mono<SnowflakeResponse> executePostAndPoll(
-      String url, String requestBody, String accessToken) {
+  public Mono<SnowflakeResponse> executePostAndPoll(String url, String requestBody) {
+      checkAndRefreshToken();
+      String accessToken =
+              encryptDecryptValues.decryptValue(oauthCredentials.getOauthMap().get("accessToken"));
     return webClient
         .method(HttpMethod.POST)
         .uri(url)
@@ -96,11 +112,10 @@ public class RestAPIExecutionService {
    * @param url Endpoint request URL
    * @param statementHandle This is the handle which Snowflake provide and can be used for tracking
    *     the status of the request in execution.
-   * @param accessToken OAuth access token
    * @return true if request completes with in the required timeout and attempt otherwise false
    */
-  public boolean pollWithTimeout(String url, String statementHandle, String accessToken) {
-    return Boolean.TRUE.equals(pollDataLoadStatus(url, statementHandle, 0, accessToken).block());
+  public boolean pollWithTimeout(String url, String statementHandle) {
+    return Boolean.TRUE.equals(pollDataLoadStatus(url, statementHandle, 0).block());
   }
 
   /**
@@ -114,8 +129,11 @@ public class RestAPIExecutionService {
    *     False if execution could not finish.
    */
   private Mono<Boolean> pollDataLoadStatus(
-      String url, String statementHandle, int attempt, String accessToken) {
+      String url, String statementHandle, int attempt) {
 
+      checkAndRefreshToken();
+      String accessToken =
+              encryptDecryptValues.decryptValue(oauthCredentials.getOauthMap().get("accessToken"));
     return webClient
         .get()
         .uri(url + statementHandle)
@@ -143,7 +161,7 @@ public class RestAPIExecutionService {
                     delayDuration.getSeconds());
 
                 return Mono.delay(delayDuration)
-                    .then(pollDataLoadStatus(url, statementHandle, attempt + 1, accessToken));
+                    .then(pollDataLoadStatus(url, statementHandle, attempt + 1));
 
               } else {
                 // If the maximum number of attempts is reached (attempt >=
@@ -167,6 +185,17 @@ public class RestAPIExecutionService {
           new SnowflakeConnectorException(
               SNOWFLAKE_RESPONSE_PARSING_ERROR.getMessage(),
               SNOWFLAKE_RESPONSE_PARSING_ERROR.getErrorCode()));
+    }
+  }
+
+    /**
+     * Method to check if access token is set or null, in case of empty or null value it will call the refresh token
+     * so that execution of request does not fail
+     */
+  private void checkAndRefreshToken(){
+    if (oauthCredentials.getOauthMap().get("accessToken") == null
+         || StringUtils.isEmpty(oauthCredentials.getOauthMap().get("accessToken").getCiphertext())) {
+        tokenRefreshService.refreshToken();
     }
   }
 }
