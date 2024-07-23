@@ -55,13 +55,10 @@ public class SnowflakeMigrateDataServiceTest extends AbstractTestBase {
   @MockBean WorkflowMigrationService workflowMigrationService;
 
   @MockBean SchemaExtractorService schemaExtractorService;
-  @MockBean BigQueryOperationsService bigQueryJobService;
 
   @MockBean GoogleCloudStorageService googleCloudStorageService;
 
   @MockBean ApplicationConfigDataService applicationConfigDataService;
-
-  @MockBean SnowflakesService snowflakesService;
   @MockBean SnowflakeToBQAsyncService asyncServiceTestingClass;
 
   @Test
@@ -355,5 +352,108 @@ public class SnowflakeMigrateDataServiceTest extends AbstractTestBase {
       Assert.assertEquals(
           e.getErrorCode(), ErrorCode.MIGRATION_WORKFLOW_EXECUTION_ERROR.getErrorCode());
     }
+  }
+
+  /**
+   * Method to test the method which process the failed request upon receiving the rest call.
+   * Request gets stored in the database and if certain criteria are met then those are considered as
+   * fail requests.
+   */
+  @Test
+  public void testProcessFailedRequestMigratedRows() {
+
+    ApplicationConfigData applicationConfigData = new ApplicationConfigData();
+    applicationConfigData.setId(1L);
+    applicationConfigData.setSourceTableName("source_table");
+    applicationConfigData.setSchema(true);
+    applicationConfigData.setSourceSchemaName("source_public");
+    applicationConfigData.setSourceDatabaseName("source_database");
+    applicationConfigData.setLocation("us");
+    applicationConfigData.setGcsBucketForDDLs("gs://testing");
+    applicationConfigData.setGcsBucketForTranslation("gs://translation");
+    applicationConfigData.setSnowflakeStageLocation("gs://snowflake_stage");
+    applicationConfigData.setSourceDatabaseName("source_database");
+    applicationConfigData.setTargetSchemaName("target_schema");
+    applicationConfigData.setTargetDatabaseName("target_database");
+    applicationConfigData.setDataUnloadedFromSnowflake(true);
+
+    List<ApplicationConfigData> applicationConfigDataList=new ArrayList<>();
+    applicationConfigDataList.add(applicationConfigData);
+
+    when(applicationConfigDataService.findByColumnName(anyBoolean())).thenReturn(applicationConfigDataList);
+
+    when(applicationConfigDataService.saveAllApplicationConfigDataServices(any(List.class)))
+            .thenReturn(applicationConfigDataList);
+
+    CompletableFuture<OperationResult<ApplicationConfigData>> resultCompletableFuture =
+            CompletableFuture.completedFuture(new OperationResult<>(applicationConfigData));
+
+    when(asyncServiceTestingClass.snowflakeUnloadAndLoadToBQLoad(any(ApplicationConfigData.class)))
+            .thenReturn(resultCompletableFuture);
+
+    List<Long> requestIds = snowflakeMigrateDataService.processFailedRequestMigratedRows();
+    Assert.assertFalse(requestIds.isEmpty());
+    Assert.assertEquals(1,requestIds.get(0).longValue());
+  }
+
+  /**
+   * This is the negative scenario for processFailedRequestMigratedRows(). This method mocks the empty response
+   * and sends no rows from database. For the method it means either no failed request exits or if exists then
+   * does not meet the failed request criteria.
+   */
+  @Test
+  public void testProcessFailedRequestMigratedRowsNoFailedRequestExits() {
+
+    when(applicationConfigDataService.findByColumnName(anyBoolean())).thenReturn(new ArrayList<>());
+
+    List<Long> requestIds = snowflakeMigrateDataService.processFailedRequestMigratedRows();
+    Assert.assertTrue(requestIds.isEmpty());
+  }
+
+  /**
+   * This outlines a negative scenario for the processFailedRequestMigratedRows() method. In this case,
+   * we're simulating the behavior where the method unexpectedly encounters an exception during its execution.
+   */
+  @Test
+  public void testProcessFailedRequestMigratedRowsThrowExceptionCase() {
+
+    when(applicationConfigDataService.findByColumnName(anyBoolean())).thenThrow(new RuntimeException("This is test exception"));
+
+    List<Long> requestIds = snowflakeMigrateDataService.processFailedRequestMigratedRows();
+    Assert.assertTrue(requestIds.isEmpty());
+  }
+
+  /**
+   * The processFailedRequestMigratedRows() method is designed to handle situations where the database contains failed requests.
+   * In this particular negative scenario, the method encounters a situation where, despite the presence of failed requests in
+   * the database, none of them meet the criteria for processing. This occurs because the necessary Snowflake unload step has
+   * not yet been completed.
+   */
+  @Test
+  public void testProcessFailedRequestMigratedRowsSnowflakeUnloadStepUnfinished() {
+    ApplicationConfigData applicationConfigData = new ApplicationConfigData();
+    applicationConfigData.setId(1L);
+    applicationConfigData.setSourceTableName("source_table");
+    applicationConfigData.setSchema(true);
+    applicationConfigData.setSourceSchemaName("source_public");
+    applicationConfigData.setSourceDatabaseName("source_database");
+    applicationConfigData.setLocation("us");
+    applicationConfigData.setGcsBucketForDDLs("gs://testing");
+    applicationConfigData.setGcsBucketForTranslation("gs://translation");
+    applicationConfigData.setSnowflakeStageLocation("gs://snowflake_stage");
+    applicationConfigData.setSourceDatabaseName("source_database");
+    applicationConfigData.setTargetSchemaName("target_schema");
+    applicationConfigData.setTargetDatabaseName("target_database");
+    //Keeping this value as false so that this request is not considered as failed request
+    // to reprocess as per business logic
+    applicationConfigData.setDataUnloadedFromSnowflake(false);
+
+    List<ApplicationConfigData> applicationConfigDataList=new ArrayList<>();
+    applicationConfigDataList.add(applicationConfigData);
+
+    when(applicationConfigDataService.findByColumnName(anyBoolean())).thenReturn(applicationConfigDataList);
+
+    List<Long> requestIds = snowflakeMigrateDataService.processFailedRequestMigratedRows();
+    Assert.assertTrue(requestIds.isEmpty());
   }
 }

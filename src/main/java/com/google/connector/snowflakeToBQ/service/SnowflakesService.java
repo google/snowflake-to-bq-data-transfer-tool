@@ -16,14 +16,10 @@
 
 package com.google.connector.snowflakeToBQ.service;
 
-import static com.google.connector.snowflakeToBQ.util.PropertyManager.SNOWFLAKE_STATEMENT_POST_REST_API;
-
-import com.google.connector.snowflakeToBQ.config.OAuthCredentials;
 import com.google.connector.snowflakeToBQ.config.SnowflakeConfigLoader;
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
 import com.google.connector.snowflakeToBQ.model.response.SnowflakeResponse;
 import com.google.connector.snowflakeToBQ.util.ErrorCode;
-import com.google.connector.snowflakeToBQ.util.encryption.EncryptValues;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
@@ -32,14 +28,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import static com.google.connector.snowflakeToBQ.util.PropertyManager.SNOWFLAKE_STATEMENT_POST_REST_API;
+
 @Service
 public class SnowflakesService {
   private static final Logger log = LoggerFactory.getLogger(SnowflakesService.class);
   final RestAPIExecutionService restService;
   final SnowflakeConfigLoader snowflakeConfigLoader;
-  private final OAuthCredentials oauthCredentials;
-  private final EncryptValues encryptDecryptValues;
-  private final TokenRefreshService tokenRefreshService;
 
   @Value("${snowflake.account.url}")
   @Setter
@@ -48,15 +43,9 @@ public class SnowflakesService {
 
   public SnowflakesService(
       RestAPIExecutionService restService,
-      SnowflakeConfigLoader snowflakeConfigLoader,
-      OAuthCredentials oauthCredentials,
-      EncryptValues encryptDecryptValues,
-      TokenRefreshService tokenRefreshService) {
+      SnowflakeConfigLoader snowflakeConfigLoader) {
     this.restService = restService;
     this.snowflakeConfigLoader = snowflakeConfigLoader;
-    this.oauthCredentials = oauthCredentials;
-    this.encryptDecryptValues = encryptDecryptValues;
-    this.tokenRefreshService = tokenRefreshService;
   }
 
   public String executeUnloadDataCommand(
@@ -80,17 +69,10 @@ public class SnowflakesService {
             snowflakeQuery);
     log.info("Snowflake Command to be executed from Rest API:{}", command);
 
-    if (oauthCredentials.getOauthMap().get("accessToken") == null
-        || StringUtils.isEmpty(oauthCredentials.getOauthMap().get("accessToken").getCiphertext())) {
-      tokenRefreshService.refreshToken();
-    }
-    String accessToken =
-        encryptDecryptValues.decryptValue(oauthCredentials.getOauthMap().get("accessToken"));
-
     SnowflakeResponse response =
         restService
             .executePostAndPoll(
-                snowflakeAccountURl + SNOWFLAKE_STATEMENT_POST_REST_API, command, accessToken)
+                snowflakeAccountURl + SNOWFLAKE_STATEMENT_POST_REST_API, command)
             .block();
     log.info("Snowflake Copy Into command rest API execution response:{}", response);
 
@@ -104,7 +86,7 @@ public class SnowflakesService {
     if (!response.getMessage().equals("Statement executed successfully.")) {
       boolean pollReturnValue =
           restService.pollWithTimeout(
-              SNOWFLAKE_STATEMENT_POST_REST_API, response.getStatementHandle(), accessToken);
+             snowflakeAccountURl + SNOWFLAKE_STATEMENT_POST_REST_API, response.getStatementHandle());
       log.info(
           "Snowflake polling statement handle command rest API execution result:{}",
           pollReturnValue);

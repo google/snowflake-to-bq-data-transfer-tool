@@ -179,7 +179,7 @@ public class SnowflakeMigrateDataService {
    * @return List of Ids created and executed during this method call.
    */
   public List<Long> processFailedRequestMigratedRows() {
-    List<Long> requestIds = null;
+    List<Long> requestIds = Collections.emptyList();
 
     // Extracting ddlDataDTO fields from the received input request.
     try {
@@ -196,7 +196,7 @@ public class SnowflakeMigrateDataService {
           getFailedRequestEligibleForProcessing(applicationConfigDataList);
 
       if (eligibleFailedRequestsForProcessing.isEmpty()) {
-        return requestIds;
+        return Collections.emptyList();
       }
       requestIds =
           getCurrentlyProcessingRequestIdsFromDatabase(eligibleFailedRequestsForProcessing);
