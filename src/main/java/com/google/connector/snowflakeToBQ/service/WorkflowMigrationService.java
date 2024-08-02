@@ -75,7 +75,9 @@ public class WorkflowMigrationService {
       workflowMigrationResponse.setTranslatedFileFullGCSPath(
           getOutputFolderForTranslation(translateDDLDataDTO));
     } catch (Exception e) {
-      log.error("Error while creating the executing the migration workflow:{}", e.getMessage());
+      log.error(
+          "Error while creating the executing the migration workflow:{}\nStack Trace:",
+          e.getMessage(),e);
       throw new SnowflakeConnectorException(
           MIGRATION_WORKFLOW_EXECUTION_ERROR.getMessage(),
           MIGRATION_WORKFLOW_EXECUTION_ERROR.getErrorCode());

@@ -66,8 +66,10 @@ public class BigQueryInstanceCreator {
       }
     } catch (Exception e) {
       String errorMessage =
-          String.format("Unable to create BigQuery instance. Error Message::%s", e.getMessage());
-      log.error(errorMessage);
+          String.format(
+              "Unable to create BigQuery instance. Error Message::%s\nStack Trace:",
+              e.getMessage());
+      log.error(errorMessage, e);
       throw new RuntimeException(errorMessage);
     }
   }
@@ -83,7 +85,7 @@ public class BigQueryInstanceCreator {
     try (FileInputStream serviceAccountStream = new FileInputStream(credentialsPath)) {
       return ServiceAccountCredentials.fromStream(serviceAccountStream);
     } catch (IOException e) {
-      log.error(e.getMessage());
+      log.error(e.getMessage() + "\nStack Trace:", e);
       throw new RuntimeException(
           "Error while creating credential object from service account file");
     }

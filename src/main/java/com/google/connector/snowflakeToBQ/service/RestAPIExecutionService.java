@@ -28,6 +28,7 @@ import java.time.Duration;
 import java.util.Map;
 
 import com.google.connector.snowflakeToBQ.util.encryption.EncryptValues;
+import io.grpc.netty.shaded.io.netty.channel.unix.Errors;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 /**
  * This helps in executing the rest API request. It basically Spring boot's WebClient(Non-blocking,
@@ -55,7 +57,6 @@ public class RestAPIExecutionService {
   private final OAuthCredentials oauthCredentials;
   private final EncryptValues encryptDecryptValues;
   private final TokenRefreshService tokenRefreshService;
-
 
   @Value("${snowflake.rest.api.max.attempt}")
   private int snowflakeRestAPIMaxAttempt;
@@ -75,16 +76,33 @@ public class RestAPIExecutionService {
   }
 
   /**
-   * Method to execute the rest API request based on the received parameters.
+   * Executes a POST request to the specified URL and handles retries and error logging.
    *
-   * @param url Endpoint request URL
-   * @param requestBody body of the request
-   * @return SnowflakeResponse object
+   * <p>This method performs the following actions:
+   *
+   * <ul>
+   *   <li>Validates and refreshes the OAuth token if necessary.
+   *   <li>Configures and sends a POST request using the provided URL and request body.
+   *   <li>Includes appropriate headers for content type and authorization.
+   *   <li>Retrieves the response and converts it into a {@link SnowflakeResponse} object.
+   *   <li>Handles HTTP status errors by logging the status and wrapping it in a {@link
+   *       SnowflakeConnectorException}.
+   *   <li>Retries the request up to 3 times with a 4-second backoff delay in case of
+   *       network-related errors (e.g., {@link Errors.NativeIoException}).
+   *   <li>Logs any errors that occur during the request or retries.
+   * </ul>
+   *
+   * @param url The URL to which the POST request will be sent.
+   * @param requestBody The body of the POST request, which will be sent in JSON format.
+   * @return A {@link Mono} that emits the {@link SnowflakeResponse} when the request is successful.
+   *     If the request fails after all retries, it will emit an error.
+   * @throws Errors.NativeIoException if a network-related error occurs and the request needs to be
+   *     retried.
    */
   public Mono<SnowflakeResponse> executePostAndPoll(String url, String requestBody) {
-      checkAndRefreshToken();
-      String accessToken =
-              encryptDecryptValues.decryptValue(oauthCredentials.getOauthMap().get("accessToken"));
+    checkAndRefreshToken();
+    String accessToken =
+        encryptDecryptValues.decryptValue(oauthCredentials.getOauthMap().get("accessToken"));
     return webClient
         .method(HttpMethod.POST)
         .uri(url)
@@ -103,7 +121,21 @@ public class RestAPIExecutionService {
                       SNOWFLAKE_REST_API_EXECUTION_ERROR.getMessage() + ", " + status,
                       SNOWFLAKE_REST_API_EXECUTION_ERROR.getErrorCode()));
             })
-        .bodyToMono(SnowflakeResponse.class);
+        .bodyToMono(SnowflakeResponse.class)
+        .retryWhen(
+            // TODO: Need to assess it later if these values should be moved to Property files.
+            Retry.backoff(3, Duration.ofSeconds(5))
+                .filter(
+                    throwable -> {
+                      // Retry only on specific exceptions or conditions
+                      // here retrying on network-related exceptions
+                      return throwable instanceof Errors.NativeIoException;
+                    })
+                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure()))
+        .doOnError(
+            e -> {
+              log.error("Request failed with unexpected error.\nStacktrace", e);
+            });
   }
 
   /**
@@ -128,12 +160,11 @@ public class RestAPIExecutionService {
    * @return True if the command execution finished with in the defined max attempt and duration,
    *     False if execution could not finish.
    */
-  private Mono<Boolean> pollDataLoadStatus(
-      String url, String statementHandle, int attempt) {
+  private Mono<Boolean> pollDataLoadStatus(String url, String statementHandle, int attempt) {
 
-      checkAndRefreshToken();
-      String accessToken =
-              encryptDecryptValues.decryptValue(oauthCredentials.getOauthMap().get("accessToken"));
+    checkAndRefreshToken();
+    String accessToken =
+        encryptDecryptValues.decryptValue(oauthCredentials.getOauthMap().get("accessToken"));
     return webClient
         .get()
         .uri(url + statementHandle)
@@ -179,8 +210,9 @@ public class RestAPIExecutionService {
       return Mono.just(objectMapper.readValue(jsonStatus, typeReference));
     } catch (Exception e) {
       log.error(
-          "Failed to parse the received JSON response from snowflake rest API execution, error:{}",
-          e.getMessage());
+          "Failed to parse the received JSON response from snowflake rest API execution, error:{}\nStack Trace:",
+          e.getMessage(),
+          e);
       return Mono.error(
           new SnowflakeConnectorException(
               SNOWFLAKE_RESPONSE_PARSING_ERROR.getMessage(),
@@ -188,14 +220,14 @@ public class RestAPIExecutionService {
     }
   }
 
-    /**
-     * Method to check if access token is set or null, in case of empty or null value it will call the refresh token
-     * so that execution of request does not fail
-     */
-  private void checkAndRefreshToken(){
+  /**
+   * Method to check if access token is set or null, in case of empty or null value it will call the
+   * refresh token so that execution of request does not fail
+   */
+  private void checkAndRefreshToken() {
     if (oauthCredentials.getOauthMap().get("accessToken") == null
-         || StringUtils.isEmpty(oauthCredentials.getOauthMap().get("accessToken").getCiphertext())) {
-        tokenRefreshService.refreshToken();
+        || StringUtils.isEmpty(oauthCredentials.getOauthMap().get("accessToken").getCiphertext())) {
+      tokenRefreshService.refreshToken();
     }
   }
 }

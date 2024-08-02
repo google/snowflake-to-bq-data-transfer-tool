@@ -16,62 +16,69 @@
 
 package com.google.connector.snowflakeToBQ.service;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
+
 import com.google.connector.snowflakeToBQ.base.AbstractTestBase;
 import com.google.connector.snowflakeToBQ.config.SnowflakeConfigLoader;
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
+import com.google.connector.snowflakeToBQ.model.datadto.SnowflakeUnloadToGCSDataDTO;
 import com.google.connector.snowflakeToBQ.model.response.SnowflakeResponse;
 import com.google.connector.snowflakeToBQ.util.ErrorCode;
+import java.util.UUID;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import reactor.core.publisher.Mono;
-
-import java.util.UUID;
-
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
 
 public class SnowflakesServiceTest extends AbstractTestBase {
   private static final Logger log = LoggerFactory.getLogger(SnowflakesServiceTest.class);
 
   private SnowflakesService snowflakesService;
+
   @MockBean RestAPIExecutionService restAPIExecutionService;
 
   @MockBean SnowflakeConfigLoader snowflakeConfigLoader;
 
+  @Value("${gcs.storage.integration}")
+  String gcsStorageIntegration;
+
   String requestBody =
       "{\n"
-          + "\"warehouse\":\"Test\",\n"
-          + "\"statement\" : \" CREATE or replace STAGE GCS_STAGE_COPY_INTO_%s"
-          + " STORAGE_INTEGRATION =  MIGRATION_INTEGRATION1 URL = 'gcs://%s/%s'"
-          + " FILE_FORMAT = %s; COPY INTO @GCS_STAGE_COPY_INTO_%s/%s FROM"
-          + " %s  OVERWRITE=TRUE HEADER=TRUE \",\n"
-          + "\"database\":\"TEST_DATABASE\",\n"
-          + "\"schema\":\"PUBLIC\",\n"
-          + "\"parameters\": {\n"
-          + "      \"MULTI_STATEMENT_COUNT\": \"2\"\n"
-          + "  }";
+          + "  \"UnloadDataRequest\": {\n"
+          + "    \"warehouse\": \"{{WAREHOUSE}}\",\n"
+          + "    \"statement\": \"BEGIN; ALTER SESSION SET QUERY_TAG = 'BQ-MIGRATION-{{TABLE_NAME}}'; USE DATABASE {{DATABASE}}; USE SCHEMA {{SCHEMA}}; CREATE OR REPLACE STAGE GCS_STAGE_COPY_INTO_{{TABLE_NAME}} STORAGE_INTEGRATION = {{STORAGE_INTEGRATION}} URL = 'gcs://{{STAGE_LOCATION}}/{{TABLE_NAME}}' FILE_FORMAT = {{FILE_FORMAT}}; COPY INTO @GCS_STAGE_COPY_INTO_{{TABLE_NAME}}/{{TABLE_NAME}} FROM {{SNOWFLAKE_QUERY}}  OVERWRITE=TRUE HEADER=TRUE; COMMIT;\",\n"
+          + "    \"parameters\": {\n"
+          + "      \"MULTI_STATEMENT_COUNT\": \"7\"\n"
+          + "    }\n"
+          + "  }\n"
+          + "}\n";
 
   @Before
   public void setup() {
-    snowflakesService =
-        new SnowflakesService(
-            restAPIExecutionService,
-            snowflakeConfigLoader);
+    snowflakesService = new SnowflakesService(restAPIExecutionService, snowflakeConfigLoader);
+    snowflakesService.setGcsStorageIntegration(gcsStorageIntegration);
   }
 
   @Test()
   public void testExecuteUnloadDataCommandEmptyResponse() {
     Mono<SnowflakeResponse> s = Mono.just(new SnowflakeResponse());
     when(snowflakeConfigLoader.getSnowflakeUnloadRequestBody(anyString())).thenReturn(requestBody);
-    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString()))
-        .thenReturn(s);
+    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString())).thenReturn(s);
     when(snowflakeConfigLoader.getQuery("test")).thenReturn("select * from test");
     try {
-      snowflakesService.executeUnloadDataCommand("test", "gs:/bucket/test", "SF_GCS_CSV_FORMAT1");
+      SnowflakeUnloadToGCSDataDTO snowflakeUnloadToGCSDataDTO = new SnowflakeUnloadToGCSDataDTO();
+      snowflakeUnloadToGCSDataDTO.setDatabaseName("TEST_DATABASE");
+      snowflakeUnloadToGCSDataDTO.setSchemaName("public");
+      snowflakeUnloadToGCSDataDTO.setTableName("test");
+      snowflakeUnloadToGCSDataDTO.setSnowflakeStageLocation("gs:/bucket/test");
+      snowflakeUnloadToGCSDataDTO.setSnowflakeFileFormatValue("SF_GCS_CSV_FORMAT1");
+      snowflakeUnloadToGCSDataDTO.setWarehouse("MIGRATION_WAREHOUSE");
+      snowflakesService.executeUnloadDataCommand(snowflakeUnloadToGCSDataDTO);
       Assert.fail();
     } catch (SnowflakeConnectorException e) {
       Assert.assertEquals(ErrorCode.SNOWFLAKE_UNLOAD_DATA_ERROR.getMessage(), e.getMessage());
@@ -94,7 +101,14 @@ public class SnowflakesServiceTest extends AbstractTestBase {
         .thenReturn(responseMono);
     when(snowflakeConfigLoader.getQuery("test")).thenReturn("select * from test");
     try {
-      snowflakesService.executeUnloadDataCommand("test", "gs:/bucket/test", "SF_GCS_CSV_FORMAT1");
+      SnowflakeUnloadToGCSDataDTO snowflakeUnloadToGCSDataDTO = new SnowflakeUnloadToGCSDataDTO();
+      snowflakeUnloadToGCSDataDTO.setDatabaseName("TEST_DATABASE");
+      snowflakeUnloadToGCSDataDTO.setSchemaName("public");
+      snowflakeUnloadToGCSDataDTO.setTableName("test");
+      snowflakeUnloadToGCSDataDTO.setSnowflakeStageLocation("gs:/bucket/test");
+      snowflakeUnloadToGCSDataDTO.setSnowflakeFileFormatValue("SF_GCS_CSV_FORMAT1");
+      snowflakeUnloadToGCSDataDTO.setWarehouse("MIGRATION_WAREHOUSE");
+      snowflakesService.executeUnloadDataCommand(snowflakeUnloadToGCSDataDTO);
       Assert.fail();
     } catch (SnowflakeConnectorException e) {
       Assert.assertEquals(ErrorCode.SNOWFLAKE_UNLOAD_DATA_ERROR.getMessage(), e.getMessage());
@@ -107,11 +121,17 @@ public class SnowflakesServiceTest extends AbstractTestBase {
     Mono<SnowflakeResponse> s = Mono.just(new SnowflakeResponse());
 
     when(snowflakeConfigLoader.getSnowflakeUnloadRequestBody(anyString())).thenReturn(requestBody);
-    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString()))
-        .thenReturn(s);
+    when(restAPIExecutionService.executePostAndPoll(anyString(), anyString())).thenReturn(s);
     when(snowflakeConfigLoader.getQuery("test")).thenReturn("select * from test");
     try {
-      snowflakesService.executeUnloadDataCommand("test1", "gs:/bucket/test", "SF_GCS_CSV_FORMAT1");
+      SnowflakeUnloadToGCSDataDTO snowflakeUnloadToGCSDataDTO = new SnowflakeUnloadToGCSDataDTO();
+      snowflakeUnloadToGCSDataDTO.setDatabaseName("TEST_DATABASE");
+      snowflakeUnloadToGCSDataDTO.setSchemaName("public");
+      snowflakeUnloadToGCSDataDTO.setTableName("test");
+      snowflakeUnloadToGCSDataDTO.setSnowflakeStageLocation("gs:/bucket/test");
+      snowflakeUnloadToGCSDataDTO.setSnowflakeFileFormatValue("SF_GCS_CSV_FORMAT1");
+      snowflakeUnloadToGCSDataDTO.setWarehouse("MIGRATION_WAREHOUSE");
+      snowflakesService.executeUnloadDataCommand(snowflakeUnloadToGCSDataDTO);
       Assert.fail();
     } catch (SnowflakeConnectorException e) {
       Assert.assertEquals(ErrorCode.SNOWFLAKE_UNLOAD_DATA_ERROR.getMessage(), e.getMessage());
@@ -130,7 +150,14 @@ public class SnowflakesServiceTest extends AbstractTestBase {
         .thenReturn(Mono.empty());
     when(snowflakeConfigLoader.getQuery("test")).thenReturn("select * from test");
     try {
-      snowflakesService.executeUnloadDataCommand("test", "gs:/bucket/test", "SF_GCS_CSV_FORMAT1");
+      SnowflakeUnloadToGCSDataDTO snowflakeUnloadToGCSDataDTO = new SnowflakeUnloadToGCSDataDTO();
+      snowflakeUnloadToGCSDataDTO.setDatabaseName("TEST_DATABASE");
+      snowflakeUnloadToGCSDataDTO.setSchemaName("public");
+      snowflakeUnloadToGCSDataDTO.setTableName("test");
+      snowflakeUnloadToGCSDataDTO.setSnowflakeStageLocation("gs:/bucket/test");
+      snowflakeUnloadToGCSDataDTO.setSnowflakeFileFormatValue("SF_GCS_CSV_FORMAT1");
+      snowflakeUnloadToGCSDataDTO.setWarehouse("MIGRATION_WAREHOUSE");
+      snowflakesService.executeUnloadDataCommand(snowflakeUnloadToGCSDataDTO);
       Assert.fail();
     } catch (SnowflakeConnectorException e) {
       Assert.assertEquals(ErrorCode.SNOWFLAKE_UNLOAD_DATA_ERROR.getMessage(), e.getMessage());
@@ -149,10 +176,16 @@ public class SnowflakesServiceTest extends AbstractTestBase {
     when(snowflakeConfigLoader.getSnowflakeUnloadRequestBody(anyString())).thenReturn(requestBody);
     when(restAPIExecutionService.executePostAndPoll(anyString(), anyString()))
         .thenReturn(responseMono);
-    when(restAPIExecutionService.pollWithTimeout(anyString(), anyString()))
-        .thenReturn(true);
-    String returnValue =
-        snowflakesService.executeUnloadDataCommand("test", "gs:/bucket/test", "SF_GCS_CSV_FORMAT1");
+    when(restAPIExecutionService.pollWithTimeout(anyString(), anyString())).thenReturn(true);
+    SnowflakeUnloadToGCSDataDTO snowflakeUnloadToGCSDataDTO = new SnowflakeUnloadToGCSDataDTO();
+    snowflakeUnloadToGCSDataDTO.setDatabaseName("TEST_DATABASE");
+    snowflakeUnloadToGCSDataDTO.setSchemaName("public");
+    snowflakeUnloadToGCSDataDTO.setTableName("test");
+    snowflakeUnloadToGCSDataDTO.setSnowflakeStageLocation("gs:/bucket/test");
+    snowflakeUnloadToGCSDataDTO.setSnowflakeFileFormatValue("SF_GCS_CSV_FORMAT1");
+    snowflakeUnloadToGCSDataDTO.setWarehouse("MIGRATION_WAREHOUSE");
+    String returnValue = snowflakesService.executeUnloadDataCommand(snowflakeUnloadToGCSDataDTO);
+
     Assert.assertEquals(statementHandle, returnValue);
   }
 
@@ -167,10 +200,15 @@ public class SnowflakesServiceTest extends AbstractTestBase {
     when(snowflakeConfigLoader.getSnowflakeUnloadRequestBody(anyString())).thenReturn(requestBody);
     when(restAPIExecutionService.executePostAndPoll(anyString(), anyString()))
         .thenReturn(responseMono);
-    when(restAPIExecutionService.pollWithTimeout(anyString(), anyString()))
-        .thenReturn(true);
-    String returnValue =
-        snowflakesService.executeUnloadDataCommand("test", "gs:/bucket/test", "SF_GCS_CSV_FORMAT1");
+    when(restAPIExecutionService.pollWithTimeout(anyString(), anyString())).thenReturn(true);
+    SnowflakeUnloadToGCSDataDTO snowflakeUnloadToGCSDataDTO = new SnowflakeUnloadToGCSDataDTO();
+    snowflakeUnloadToGCSDataDTO.setDatabaseName("TEST_DATABASE");
+    snowflakeUnloadToGCSDataDTO.setSchemaName("public");
+    snowflakeUnloadToGCSDataDTO.setTableName("test");
+    snowflakeUnloadToGCSDataDTO.setSnowflakeStageLocation("gs:/bucket/test");
+    snowflakeUnloadToGCSDataDTO.setSnowflakeFileFormatValue("SF_GCS_CSV_FORMAT1");
+    snowflakeUnloadToGCSDataDTO.setWarehouse("MIGRATION_WAREHOUSE");
+    String returnValue = snowflakesService.executeUnloadDataCommand(snowflakeUnloadToGCSDataDTO);
     Assert.assertEquals(statementHandle, returnValue);
   }
 
@@ -185,12 +223,16 @@ public class SnowflakesServiceTest extends AbstractTestBase {
     when(snowflakeConfigLoader.getSnowflakeUnloadRequestBody(anyString())).thenReturn(requestBody);
     when(restAPIExecutionService.executePostAndPoll(anyString(), anyString()))
         .thenReturn(responseMono);
-    when(restAPIExecutionService.pollWithTimeout(anyString(), anyString()))
-        .thenReturn(false);
+    when(restAPIExecutionService.pollWithTimeout(anyString(), anyString())).thenReturn(false);
     try {
-      String returnValue =
-          snowflakesService.executeUnloadDataCommand(
-              "test", "gs:/bucket/test", "SF_GCS_CSV_FORMAT1");
+      SnowflakeUnloadToGCSDataDTO snowflakeUnloadToGCSDataDTO = new SnowflakeUnloadToGCSDataDTO();
+      snowflakeUnloadToGCSDataDTO.setDatabaseName("TEST_DATABASE");
+      snowflakeUnloadToGCSDataDTO.setSchemaName("public");
+      snowflakeUnloadToGCSDataDTO.setTableName("test");
+      snowflakeUnloadToGCSDataDTO.setSnowflakeStageLocation("gs:/bucket/test");
+      snowflakeUnloadToGCSDataDTO.setSnowflakeFileFormatValue("SF_GCS_CSV_FORMAT1");
+      snowflakeUnloadToGCSDataDTO.setWarehouse("MIGRATION_WAREHOUSE");
+      String returnValue = snowflakesService.executeUnloadDataCommand(snowflakeUnloadToGCSDataDTO);
       Assert.fail();
     } catch (SnowflakeConnectorException e) {
       Assert.assertEquals(ErrorCode.SNOWFLAKE_REST_API_POLL_ERROR.getMessage(), e.getMessage());

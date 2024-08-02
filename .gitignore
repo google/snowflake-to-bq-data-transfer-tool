@@ -39,3 +39,4 @@ dependency-reduced-pom.xml
 *config_data.trace.db
 *.trace.db
 *.mv.db
+*data

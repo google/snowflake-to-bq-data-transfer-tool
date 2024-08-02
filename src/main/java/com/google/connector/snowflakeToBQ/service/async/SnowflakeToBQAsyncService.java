@@ -23,12 +23,14 @@ import com.google.connector.snowflakeToBQ.entity.ApplicationConfigData;
 import com.google.connector.snowflakeToBQ.mapper.MigrateRequestMapper;
 import com.google.connector.snowflakeToBQ.model.OperationResult;
 import com.google.connector.snowflakeToBQ.model.datadto.BigQueryDetailsDataDTO;
+import com.google.connector.snowflakeToBQ.model.datadto.SnowflakeUnloadToGCSDataDTO;
 import com.google.connector.snowflakeToBQ.service.ApplicationConfigDataService;
 import com.google.connector.snowflakeToBQ.service.BigQueryOperationsService;
 import com.google.connector.snowflakeToBQ.service.GoogleCloudStorageService;
 import com.google.connector.snowflakeToBQ.service.SnowflakesService;
 import com.google.connector.snowflakeToBQ.util.PropertyManager;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -83,8 +85,13 @@ public class SnowflakeToBQAsyncService {
     // have saved it in the application data and used it to set again in this method in MDC. This
     // way any following method call from this method will log that entry, and we will get same
     // requestId logged from Controller till the end of all the calls.
-
-    MDC.put("requestLogId", applicationConfigData.getRequestLogId());
+    String newMDCRequestId =
+        applicationConfigData.getRequestLogId()
+            + ":"
+            + UUID.randomUUID()
+            + ":"
+            + applicationConfigData.getSourceTableName();
+    MDC.put("requestLogId", newMDCRequestId);
 
     log.info("Inside SnowflakeUnloadToBQLoad() of SnowflakeToBQAsyncService class");
 
@@ -153,11 +160,11 @@ public class SnowflakeToBQAsyncService {
     // Checking if this step is already completed
     if (!applicationConfigData.isDataUnloadedFromSnowflake()) {
       // Starting the execution of Data unload from Snowflake using rest API.
+      SnowflakeUnloadToGCSDataDTO snowflakeUnloadToGCSDataDTO =
+          MigrateRequestMapper.applicationConfigDataToSnowflakeUnloadToGCSDataDTO(
+              applicationConfigData);
       String snowflakeStatementHandle =
-          snowflakesService.executeUnloadDataCommand(
-              applicationConfigData.getTargetTableName(),
-              applicationConfigData.getSnowflakeStageLocation(),
-              applicationConfigData.getSnowflakeFileFormatValue());
+          snowflakesService.executeUnloadDataCommand(snowflakeUnloadToGCSDataDTO);
       log.info(
           "Snowflake statement handle:: {}, for table name:: {}",
           snowflakeStatementHandle,
@@ -176,8 +183,9 @@ public class SnowflakeToBQAsyncService {
         bigQueryOperationsService.loadBigQueryJob(bigQueryDetailsDataDTO);
       } catch (Exception e) {
         log.error(
-            "Error while loading data in the table:{} ",
-            applicationConfigData.getTargetTableName());
+            "Error while loading data in the table:{}\nStack Trace:",
+            applicationConfigData.getTargetTableName(),
+            e);
 
         applicationConfigData.setLastUpdatedTime(
             PropertyManager.getDateInDesiredFormat(LocalDateTime.now(), OUTPUT_FORMATTER1));
@@ -217,7 +225,7 @@ public class SnowflakeToBQAsyncService {
         StringUtils.replaceIgnoreCase(
             ddlContent,
             applicationConfigData.getSourceDatabaseName(),
-            applicationConfigData.getTargetDatabaseName());
+            "`" + applicationConfigData.getTargetDatabaseName() + "`");
     // Update the source schema with target
     updatedContent =
         StringUtils.replaceIgnoreCase(

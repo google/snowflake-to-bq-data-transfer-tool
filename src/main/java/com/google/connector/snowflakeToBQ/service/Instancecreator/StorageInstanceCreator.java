@@ -66,6 +66,7 @@ public class StorageInstanceCreator {
                 + " account");
       }
     } catch (Exception e) {
+      log.error("Stack Trace:", e);
       throw new RuntimeException("Unable to create Storage instance");
     }
   }
@@ -81,7 +82,7 @@ public class StorageInstanceCreator {
     try (FileInputStream serviceAccountStream = new FileInputStream(credentialsPath)) {
       return ServiceAccountCredentials.fromStream(serviceAccountStream);
     } catch (IOException e) {
-      log.error(e.getMessage());
+      log.error(e.getMessage() + "\nStack Trace:", e);
       throw new RuntimeException(
           "Error while creating credential object from service account file");
     }

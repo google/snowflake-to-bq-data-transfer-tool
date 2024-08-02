@@ -34,8 +34,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
- * Class to create the instance of MigrationServiceClient using service account if provided else using application
- * default credentials.
+ * Class to create the instance of MigrationServiceClient using service account if provided else
+ * using application default credentials.
  */
 @Service
 public class MigrationServiceInstanceCreator {
@@ -72,8 +72,9 @@ public class MigrationServiceInstanceCreator {
     } catch (Exception e) {
       String errorMessage =
           String.format(
-              "Unable to create migration service instance. Error Message::%s", e.getMessage());
-      log.error(errorMessage);
+              "Unable to create migration service instance. Error Message::%s\nStack Trace:",
+              e.getMessage());
+      log.error(errorMessage, e);
       throw new RuntimeException(errorMessage);
     }
   }

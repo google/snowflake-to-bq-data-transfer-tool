@@ -17,12 +17,10 @@
 package com.google.connector.snowflakeToBQ.service;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
 import com.google.connector.snowflakeToBQ.model.datadto.DDLDataDTO;
-import com.google.connector.snowflakeToBQ.repository.SnowflakesJdbcDataRepository;
 import com.google.connector.snowflakeToBQ.util.ErrorCode;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,7 +35,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 public class SchemaExtractorServiceTest {
 
   private SchemaExtractorService schemaExtractorService;
-  @MockBean SnowflakesJdbcDataRepository snowflakesJdbcDataRepository;
+  @MockBean
+  SnowflakeQueryExecutor snowflakesJdbcDataRepository;
 
   @Before
   public void setup() {
@@ -53,7 +52,8 @@ public class SchemaExtractorServiceTest {
         "table2",
         "create or replace TABLE `project`.dataset.table2 ( DATECOL DATE,DATETIMECOL"
             + " DATETIME,TIMESTAMPCOL  TIMESTAMP");
-    when(snowflakesJdbcDataRepository.getAllTableDDLs(anyString())).thenReturn(ddlMapForSchema);
+    when(snowflakesJdbcDataRepository.getAllTableDDLs(any(DDLDataDTO.class)))
+        .thenReturn(ddlMapForSchema);
     DDLDataDTO dto = new DDLDataDTO();
     dto.setSchema(true);
     dto.setSourceSchemaName("public");
@@ -70,7 +70,7 @@ public class SchemaExtractorServiceTest {
         "table2",
         "create or replace TABLE `project`.dataset.table2 ( DATECOL DATE,DATETIMECOL"
             + " DATETIME,TIMESTAMPCOL  TIMESTAMP");
-    when(snowflakesJdbcDataRepository.multipleTableDDLS(any(String[].class)))
+    when(snowflakesJdbcDataRepository.multipleTableDDLS(any(DDLDataDTO.class)))
         .thenReturn(ddlMapForSchema);
     DDLDataDTO dto = new DDLDataDTO();
     dto.setSchema(false);
@@ -94,7 +94,7 @@ public class SchemaExtractorServiceTest {
         "table2",
         "create or replace TABLE `project`.dataset.table2 ( DATECOL DATE,DATETIMECOL"
             + " DATETIME,TIMESTAMPCOL  TIMESTAMP");
-    when(snowflakesJdbcDataRepository.multipleTableDDLS(any(String[].class)))
+    when(snowflakesJdbcDataRepository.multipleTableDDLS(any(DDLDataDTO.class)))
         .thenReturn(ddlMapForSchema);
     DDLDataDTO dto = new DDLDataDTO();
     dto.setSchema(false);

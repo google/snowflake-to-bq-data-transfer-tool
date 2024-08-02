@@ -32,7 +32,7 @@ public class H2DataSourceConfigTest extends AbstractTestBase {
   @Test()
   public void testH2DataSource() {
 
-    Assert.assertEquals(h2DataSourceConfig.getUrl(), "jdbc:h2:file:./target/mytestdb");
+    Assert.assertEquals(h2DataSourceConfig.getUrl(), "./target/mytestdb");
     Assert.assertEquals(h2DataSourceConfig.getUsername(), "test");
     Assert.assertEquals(h2DataSourceConfig.getPassword(), "test");
     Assert.assertEquals(h2DataSourceConfig.getDriverClassName(), "org.h2.Driver");

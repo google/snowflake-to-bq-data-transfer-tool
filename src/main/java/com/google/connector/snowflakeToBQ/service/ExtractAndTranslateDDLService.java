@@ -89,7 +89,10 @@ public class ExtractAndTranslateDDLService {
         throw new RuntimeException("Workflow could not complete");
       }
     } catch (Exception e) {
-      log.error("Error while performing extractAndTranslateDDLs request,{}", e.getMessage());
+      log.error(
+          "Error while performing extractAndTranslateDDLs request,{}\nStack Trace:",
+          e.getMessage(),
+          e);
       throw new SnowflakeConnectorException(
           DDL_EXTRACTION_EXCEPTION.getMessage(), DDL_EXTRACTION_EXCEPTION.getErrorCode());
     }
