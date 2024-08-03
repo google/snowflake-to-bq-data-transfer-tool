@@ -21,12 +21,12 @@ BODY:
         }
 ```
 * **CURL command**
-```
+```bash
 curl --location 'http://localhost:8080/connector/save-oauth-values' \
---header 'Content-Type: application/json' \
---data '{"clientId":"79dAYOORu",
-"clientSecret":"MJONWzHYmtkrqdI",
-"refreshToken":"ver:2-hint:444605079557-did:"
+      --header 'Content-Type: application/json' \
+      --data '{"clientId":"79dAYOORu",
+      "clientSecret":"MJONWzHYmtkrqdI",
+      "refreshToken":"ver:2-hint:444605079557-did:"
 }'
 ```
 * Change the local host to the appropriate ip_address if connector is not started in same machine where the request are being executed.
@@ -61,7 +61,8 @@ BODY:
             "location": "us",
             "snowflakeStageLocation":        "snowflake-to-gcs-migration/data-unload",
             "snowflakeFileFormatValue":"SF_GCS_PARQUET_FORMAT1",
-            "bqLoadFileFormat":"PARQUET"
+            "bqLoadFileFormat":"PARQUET",
+            "warehouse":"MIGRATION_WAREHOUSE_GCP"
          }
 
 
@@ -85,28 +86,29 @@ snowflakeStageLocation: This is basically the storage location, its gets used in
                         All the data files from Snowflake will go inside this folder location.
 snowflakeFileFormatValue: The format in which data from Snowflake table will be unloaded to GCS, it should be created beforehand in Snowflake
 bqLoadFileFormat: Load format user by bq load job, it should be compatable with snowflakeFileFormatValue.
+warehouse: Snowflake warehouse which will be used for compute in Snowflake.
 
 ```
 * **CURL command**
-```
+```bash
 curl --location 'http://localhost:8080/connector/migrate-data' \
---header 'Content-Type: application/json' \
---data '{
-	"sourceDatabaseName": "TEST_DATABASE",
-	"sourceSchemaName": "public",
-	"sourceTableName": "orders",
-	"targetDatabaseName": "terragrunt-test2",
-	"targetSchemaName": "test_dataset",
-	"schema": false,
-	"bqTableExists": true,
-	"gcsBucketForDDLs": "snowflake-to-gcs-migration",
-	"gcsBucketForTranslation": "snowflake-to-gcs-migration",
-	"location": "us",
-	"snowflakeStageLocation": "snowflake-to-gcs-migration/data-unload",
-    "snowflakeFileFormatValue":"SF_GCS_CSV_FORMAT1",
-    "bqLoadFileFormat":"CSV"
+      --header 'Content-Type: application/json' \
+      --data '{
+        "sourceDatabaseName": "TEST_DATABASE",
+        "sourceSchemaName": "public",
+        "sourceTableName": "orders",
+        "targetDatabaseName": "terragrunt-test2",
+        "targetSchemaName": "test_dataset",
+        "schema": false,
+        "bqTableExists": true,
+        "gcsBucketForDDLs": "snowflake-to-gcs-migration",
+        "gcsBucketForTranslation": "snowflake-to-gcs-migration",
+        "location": "us",
+        "snowflakeStageLocation": "snowflake-to-gcs-migration/data-unload",
+        "snowflakeFileFormatValue":"SF_GCS_CSV_FORMAT1",
+        "bqLoadFileFormat":"CSV",
+        "warehouse":"MIGRATION_WAREHOUSE_GCP"
 }'
-
 ```
 * This rest API when executed will perform below operations
     * Extract the ddls for the table name from Snowflake.
@@ -131,39 +133,41 @@ BODY:
           "schema": false,
           "gcsBucketForDDLs": "snowflake-to-gcs-migration",
           "gcsBucketForTranslation": "snowflake-to-gcs-migration",
-          "location": "us"
+          "location": "us",
+          "warehouse":"MIGRATION_WAREHOUSE_GCP"
           }
 ```
 * **Definition of body parameters**
 ```
-sourceDatabaseName: Database name in Snowflake to be migrated to BigQuery.
-sourceSchemaName: Schema name in a database to be migrated.
-sourceTableName: Table names to be migrated, if full schema is not getting migrated, user can give comma separated value to migrate more than 1 table.
-targetDatabaseName: BigQuery does not have database concept, this is basically the project name in GCP.
-targetSchemaName: Dataset name in BigQuery.
-schema: This parameter will define if we are migrating the full schema or not. True means all the tables in the schema will be migrated without 
-        even providing the table names using parameter "sourceTableName". It gets preference over "sourceTableName", if this is true then table name will be ignored.
-gcsBucketForDDLs: This GCS bucket will hold the DDLS extracted from Snowflake for the table name.
-gcsBucketForTranslation: This GCS bucket will hold the translated DDLs which will be used to create table in BigQuery.
-location: location to be used for running translation job and bigquery load
+  sourceDatabaseName: Database name in Snowflake to be migrated to BigQuery.
+  sourceSchemaName: Schema name in a database to be migrated.
+  sourceTableName: Table names to be migrated, if full schema is not getting migrated, user can give comma separated value to migrate more than 1 table.
+  targetDatabaseName: BigQuery does not have database concept, this is basically the project name in GCP.
+  targetSchemaName: Dataset name in BigQuery.
+  schema: This parameter will define if we are migrating the full schema or not. True means all the tables in the schema will be migrated without 
+          even providing the table names using parameter "sourceTableName". It gets preference over "sourceTableName", if this is true then table name will be ignored.
+  gcsBucketForDDLs: This GCS bucket will hold the DDLS extracted from Snowflake for the table name.
+  gcsBucketForTranslation: This GCS bucket will hold the translated DDLs which will be used to create table in BigQuery.
+  location: location to be used for running translation job and bigquery load.
+  warehouse: Snowflake warehouse which will be used for compute in Snowflake.
 ```
 * **CURL command**
-```
+```bash
 curl --location --request POST 'http://localhost:8080/connector/extract-ddl' \
---header 'Authorization: Bearer ver:1-hint:29137637956804618-ETMsDgAAAYsBnhlIABR' \
---header 'Content-Type: application/json' \
---data-raw '{
-	"sourceDatabaseName": "TEST_DATABASE",
-	"sourceSchemaName": "public",
-	"sourceTableName": "DATES_VALUE",
-	"targetDatabaseName": "terragrunt-test2",
-	"targetSchemaName": "test_dataset",
-	"gcsBucketForDDLs": "snowflake-to-gcs-migration",
-    "schema": false,
-	"gcsBucketForTranslation": "snowflake-to-gcs-migration",
-	"location": "us"
-}
-'
+      --header 'Authorization: Bearer ver:1-hint:29137637956804618-ETMsDgAAAYsBnhlIABR' \
+      --header 'Content-Type: application/json' \
+      --data-raw '{
+        "sourceDatabaseName": "TEST_DATABASE",
+        "sourceSchemaName": "public",
+        "sourceTableName": "DATES_VALUE",
+        "targetDatabaseName": "terragrunt-test2",
+        "targetSchemaName": "test_dataset",
+        "gcsBucketForDDLs": "snowflake-to-gcs-migration",
+        "schema": false,
+        "gcsBucketForTranslation": "snowflake-to-gcs-migration",
+        "location": "us",
+        "warehouse":"MIGRATION_WAREHOUSE_GCP"
+}'
 
 ```
 * This rest API when executed will perform below operations
@@ -178,29 +182,37 @@ curl --location --request POST 'http://localhost:8080/connector/extract-ddl' \
 Request Type: POST
 URL: http://localhost:8080/connector/snowflake-unload-to-gcs
 BODY: 
-         {
-          "tableNames":["orders"],
-          "snowflakeStageLocation": "snowflake-to-gcs-migration/data-unload",
-          "snowflakeStageLocation": "SF_GCS_CSV_FORMAT1"
-          }
-
+        {
+         "sourceDatabaseName": "TEST_DATABASE",
+         "sourceSchemaName": "public",
+         "sourceTableName": "DATES_VALUE",
+         "snowflakeStageLocation": "snowflake-to-gcs-migration/data-unload",
+         "snowflakeStageLocation": "SF_GCS_CSV_FORMAT1",
+         "warehouse":"MIGRATION_WAREHOUSE_GCP"
+        }
 ```
 * **Definition of body parameters**
 ```
-tableNames: Name of the table which needs to be exported.
+sourceDatabaseName: Database name in Snowflake to be migrated to BigQuery.
+sourceSchemaName: Schema name in a database to be migrated.
+sourceTableName: Table names to be migrated, if full schema is not getting migrated, user can give comma separated value to migrate more than 1 table.
 snowflakeStageLocation: This is basically the storage location, its gets used in creating stage. Different stage prepend this value to other dynamic values.
                         All the data files from Snowflake will go inside this folder location.
 snowflakeFileFormatValue: The format in which data from Snowflake table will be unloaded to GCS, it should be created beforehand in Snowflake.
+warehouse: Snowflake warehouse which will be used for compute in Snowflake.
 ```
 * **CURL command**
-```
+```bash
 curl --location --request POST 'http://localhost:8080/connector/snowflake-unload-to-gcs' \
---header 'Authorization: Bearer ver:1-hint:29137637956804618-ETMsDgAAAYsB' \
---header 'Content-Type: application/json' \
---data-raw '{
-"tableNames":["orders","teststs"],
-"snowflakeStageLocation": "snowflake-to-gcs-migration/data-unload",
-"snowflakeFileFormatValue": "SF_GCS_PARQUET_FORMAT1"
+      --header 'Authorization: Bearer ver:1-hint:29137637956804618-ETMsDgAAAYsB' \
+      --header 'Content-Type: application/json' \
+      --data-raw '{
+      "sourceDatabaseName": "TEST_DATABASE",
+      "sourceSchemaName": "public",
+      "sourceTableName":"CUSTOMERS,ORDERS1",
+      "snowflakeStageLocation": "snowflake-to-gcs-migration/data-unload",
+      "snowflakeFileFormatValue": "SF_GCS_PARQUET_FORMAT1"
+      "warehouse":"MIGRATION_WAREHOUSE_GCP"
 }
 '
 
@@ -215,7 +227,7 @@ URL: http://localhost:8080/connector/process-failed-request
 
 ```
 * **CURL command**
-```
+```bash
 curl --location --request GET 'http://localhost:8080/connector/process-failed-request' \
 --header 'Authorization: Bearer ver:1-hint:29137637956804618-ETMsDgAAAYsBnhlIABRBRVMv'
 '
