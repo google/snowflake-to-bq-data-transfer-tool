@@ -78,14 +78,18 @@ pre-requisites.
 # in cloud shell terminal
 gcloud auth application-default login
 wget https://github.com/GoogleCloudPlatform
+
+# in cloud shell terminal
+wget https://github.com/google/snowflake-to-bq-data-transfer-tool/releases/download/v1.0.0/snowflake-to-bq-data-transfer.jar
 ```
 
 Run tool for simple inline query
 ```
 # in cloud shell terminal
 java -jar snowflake-to-bq-data-transfer-1.0.0.jar --spring.datasource.h2.url=./app_data \
---snowflake.account.url={SNOWFLAKE_URL} --gcs.storage.integration=MIGRATION_INTEGRATION --service.account.file.path`"
+--snowflake.account.url={SNOWFLAKE_URL} --gcs.storage.integration=MIGRATION_INTEGRATION --service.account.file.path={Path of service account}"
 ```
+* **service.account.file.path:** This property can be skipped if running using user account.
 
 ## Custom Jar Build
 * Update the [application.properties](src/main/resources/application.properties) file based on your Snowflake instance and need. The properties file contains \

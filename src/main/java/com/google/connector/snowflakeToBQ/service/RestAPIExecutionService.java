@@ -26,6 +26,7 @@ import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
 import com.google.connector.snowflakeToBQ.model.response.SnowflakeResponse;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import com.google.connector.snowflakeToBQ.util.encryption.EncryptValues;
 import io.grpc.netty.shaded.io.netty.channel.unix.Errors;
@@ -40,6 +41,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
@@ -126,10 +129,13 @@ public class RestAPIExecutionService {
             // TODO: Need to assess it later if these values should be moved to Property files.
             Retry.backoff(3, Duration.ofSeconds(5))
                 .filter(
-                    throwable -> {
-                      // Retry only on specific exceptions or conditions
-                      // here retrying on network-related exceptions
-                      return throwable instanceof Errors.NativeIoException;
+                    throwable -> { // Retry only on specific exceptions or conditions
+                      log.error("Inside the executePostAndPoll() retry logic", throwable);
+
+                      return throwable instanceof Errors.NativeIoException
+                          || throwable instanceof WebClientResponseException
+                          || throwable instanceof WebClientRequestException
+                          || throwable instanceof TimeoutException;
                     })
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure()))
         .doOnError(
