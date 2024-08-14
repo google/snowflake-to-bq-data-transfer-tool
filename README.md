@@ -80,7 +80,7 @@ gcloud auth application-default login
 wget https://github.com/GoogleCloudPlatform
 
 # in cloud shell terminal
-wget https://github.com/google/snowflake-to-bq-data-transfer-tool/releases/download/v1.0.0/snowflake-to-bq-data-transfer.jar
+wget https://github.com/google/snowflake-to-bq-data-transfer-tool/releases/download/v.1.0.0/snowflake-to-bq-data-transfer.jar
 ```
 
 Run tool for simple inline query
