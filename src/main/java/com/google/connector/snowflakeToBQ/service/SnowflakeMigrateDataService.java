@@ -139,7 +139,10 @@ public class SnowflakeMigrateDataService {
       }
       commonCodeToExecuteApplicationConfigDataForMigration(applicationConfigDataList);
     } catch (Exception e) {
-      log.error("Error while performing SnowflakeMigrationData request,{}", e.getMessage());
+      log.error(
+          "Error while performing SnowflakeMigrationData request,{}\nStack Trace:",
+          e.getMessage(),
+          e);
     }
     return requestIds;
   }
@@ -204,8 +207,9 @@ public class SnowflakeMigrateDataService {
       commonCodeToExecuteApplicationConfigDataForMigration(applicationConfigDataList);
     } catch (Exception e) {
       log.error(
-          "Error while performing SnowflakeMigrationData for the failed request of the table,{}",
-          e.getMessage());
+          "Error while performing SnowflakeMigrationData for the failed request of the table,{}\nStack Trace:",
+          e.getMessage(),
+          e);
     }
     return requestIds;
   }
@@ -256,8 +260,9 @@ public class SnowflakeMigrateDataService {
         }
       } catch (CompletionException e) {
         log.error(
-            "Exception while processing the Snowflake unload and BQ load request, error message:{}",
-            e.getMessage());
+            "Exception while processing the Snowflake unload and BQ load request, error message:{}\nStack Trace:",
+            e.getMessage(),
+            e);
       }
     }
   }

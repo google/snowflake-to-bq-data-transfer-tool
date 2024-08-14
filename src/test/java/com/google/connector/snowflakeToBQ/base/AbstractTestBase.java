@@ -16,12 +16,14 @@
 
 package com.google.connector.snowflakeToBQ.base;
 
+import com.google.connector.snowflakeToBQ.cache.EasyCacheTest;
 import com.google.connector.snowflakeToBQ.config.H2DataSourceConfigTest;
 import com.google.connector.snowflakeToBQ.controller.SnowflakesConnectorControllerTest;
 import com.google.connector.snowflakeToBQ.entity.ApplicationConfigDataTest;
 import com.google.connector.snowflakeToBQ.mapper.MigrateRequestMapperTest;
 import com.google.connector.snowflakeToBQ.model.requestresponse.TokenResponseTest;
-import com.google.connector.snowflakeToBQ.repository.SnowflakeJdbcDataRepositoryTest;
+import com.google.connector.snowflakeToBQ.repository.JDBCTemplatesTest;
+import com.google.connector.snowflakeToBQ.service.SnowflakeQueryExecutorTest;
 import com.google.connector.snowflakeToBQ.service.*;
 import com.google.connector.snowflakeToBQ.util.PropertyManagerTest;
 import com.google.connector.snowflakeToBQ.util.encryption.EncryptionValuesTest;
@@ -53,9 +55,11 @@ import org.springframework.test.context.junit4.SpringRunner;
       ApplicationConfigDataTest.class,
       MigrateRequestMapperTest.class,
       TokenResponseTest.class,
-      SnowflakeJdbcDataRepositoryTest.class,
+      SnowflakeQueryExecutorTest.class,
       EncryptionValuesTest.class,
       PropertyManagerTest.class,
-      ScheduledTokenRefreshServiceTest.class
+      ScheduledTokenRefreshServiceTest.class,
+      EasyCacheTest.class,
+      JDBCTemplatesTest.class
     })
 public abstract class AbstractTestBase {}

@@ -20,7 +20,7 @@ import static com.google.connector.snowflakeToBQ.util.ErrorCode.TABLE_NAME_NOT_P
 
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
 import com.google.connector.snowflakeToBQ.model.datadto.DDLDataDTO;
-import com.google.connector.snowflakeToBQ.repository.SnowflakesJdbcDataRepository;
+
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -32,10 +32,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class SchemaExtractorService {
   private static final Logger log = LoggerFactory.getLogger(SchemaExtractorService.class);
-  private final SnowflakesJdbcDataRepository jdbcRepository;
+  private final SnowflakeQueryExecutor jdbcRepository;
 
   @Autowired
-  public SchemaExtractorService(SnowflakesJdbcDataRepository jdbcRepository) {
+  public SchemaExtractorService(SnowflakeQueryExecutor jdbcRepository) {
     this.jdbcRepository = jdbcRepository;
   }
 
@@ -48,14 +48,11 @@ public class SchemaExtractorService {
    *     table.
    */
   public Map<String, String> getDDLs(DDLDataDTO ddlDataDTO) {
-    // Set the JDBC template if its null
-    jdbcRepository.setJdbcTemplate(
-        ddlDataDTO.getSourceDatabaseName(), ddlDataDTO.getSourceSchemaName());
     // If the request received isSchema=true, means extracts all the table's DDLs which are present
     // within the Schema, else fetch the DDLs for received table(s)
     if (ddlDataDTO.isSchema()) {
       log.info("Fetching all tables DDLs from Snowflake");
-      return jdbcRepository.getAllTableDDLs(ddlDataDTO.getSourceSchemaName());
+      return jdbcRepository.getAllTableDDLs(ddlDataDTO);
     } else {
       log.info("Fetching given table(s) DDLs from Snowflake");
       if (StringUtils.isBlank(ddlDataDTO.getSourceTableName())) {
@@ -63,9 +60,7 @@ public class SchemaExtractorService {
             TABLE_NAME_NOT_PRESENT_IN_REQUEST.getMessage(),
             TABLE_NAME_NOT_PRESENT_IN_REQUEST.getErrorCode());
       }
-      String[] tableNames = ddlDataDTO.getSourceTableName().split(",");
-      log.info("Received table count:{}", tableNames.length);
-      return jdbcRepository.multipleTableDDLS(tableNames);
+      return jdbcRepository.multipleTableDDLS(ddlDataDTO);
     }
   }
 }

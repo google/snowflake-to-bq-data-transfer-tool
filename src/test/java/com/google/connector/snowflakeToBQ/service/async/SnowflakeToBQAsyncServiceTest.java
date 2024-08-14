@@ -18,7 +18,6 @@ package com.google.connector.snowflakeToBQ.service.async;
 
 import static com.google.connector.snowflakeToBQ.util.ErrorCode.TABLE_ALREADY_EXISTS;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
@@ -26,8 +25,8 @@ import com.google.connector.snowflakeToBQ.base.AbstractTestBase;
 import com.google.connector.snowflakeToBQ.entity.ApplicationConfigData;
 import com.google.connector.snowflakeToBQ.model.OperationResult;
 import com.google.connector.snowflakeToBQ.model.datadto.BigQueryDetailsDataDTO;
+import com.google.connector.snowflakeToBQ.model.datadto.SnowflakeUnloadToGCSDataDTO;
 import com.google.connector.snowflakeToBQ.repository.ApplicationConfigDataRepository;
-import com.google.connector.snowflakeToBQ.service.ApplicationConfigDataService;
 import com.google.connector.snowflakeToBQ.service.BigQueryOperationsService;
 import com.google.connector.snowflakeToBQ.service.GoogleCloudStorageService;
 import com.google.connector.snowflakeToBQ.service.SnowflakesService;
@@ -47,7 +46,6 @@ public class SnowflakeToBQAsyncServiceTest extends AbstractTestBase {
 
   @MockBean BigQueryOperationsService bigQueryOperationsService;
   @MockBean SnowflakesService snowflakesService;
-  @MockBean ApplicationConfigDataService applicationConfigDataService;
 
   @MockBean GoogleCloudStorageService googleCloudStorageService;
 
@@ -65,7 +63,7 @@ public class SnowflakeToBQAsyncServiceTest extends AbstractTestBase {
         .thenReturn(true);
     when(bigQueryOperationsService.loadBigQueryJob(any(BigQueryDetailsDataDTO.class)))
         .thenReturn(true);
-    when(snowflakesService.executeUnloadDataCommand(anyString(), anyString(), anyString()))
+    when(snowflakesService.executeUnloadDataCommand(any(SnowflakeUnloadToGCSDataDTO.class)))
         .thenReturn("1234-abdc-fghi-handle");
     when(googleCloudStorageService.getContentFromGCSFile(any(String.class), any(String.class)))
         .thenReturn(CREATE_TABLE);

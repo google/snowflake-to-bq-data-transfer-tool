@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
 import com.google.connector.snowflakeToBQ.util.ErrorCode;
-import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -29,6 +28,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 
 /**
  * This class helps in creating a bean which loads the files and data related to Snowflake migration
@@ -49,6 +52,12 @@ public class SnowflakeConfigLoader {
 
   private Map<String, String> snowflakeUnloadDataRequestBody;
 
+  private final ResourceLoader resourceLoader;
+
+  public SnowflakeConfigLoader(ResourceLoader resourceLoader) {
+    this.resourceLoader = resourceLoader;
+  }
+
   /**
    * This method load the JSON file present at the path given to the property
    * snowflakeTableQueryMappingPath. JSON file contains the key value pair where key is the table
@@ -67,8 +76,14 @@ public class SnowflakeConfigLoader {
 
     try {
       ObjectMapper objectMapper = new ObjectMapper();
-      File file = new File(snowflakeTableQueryMappingPath);
-      snowflakeTableAndQuery = objectMapper.readValue(file, new TypeReference<>() {});
+
+      log.info(
+          "File path for Snowflake table and query mapping file:{}",
+          snowflakeTableQueryMappingPath);
+      Resource resource = getResourceHelper(snowflakeTableQueryMappingPath);
+
+      snowflakeTableAndQuery =
+          objectMapper.readValue(resource.getInputStream(), new TypeReference<>() {});
 
       for (Map.Entry<String, String> entry : snowflakeTableAndQuery.entrySet()) {
         log.info("Snowflake Table and Query mapping details ====>");
@@ -79,7 +94,7 @@ public class SnowflakeConfigLoader {
       log.error(
           "Error while loading the file contains the table name and query from the path :{}",
           snowflakeTableQueryMappingPath);
-      log.error("Error Message::{}", e.getMessage());
+      log.error("Error Message::{}\nStack Trace:", e.getMessage(), e);
       throw new SnowflakeConnectorException(
           ErrorCode.SNOWFLAKE_CONFIG_LOADER.getMessage(),
           ErrorCode.SNOWFLAKE_CONFIG_LOADER.getErrorCode());
@@ -87,9 +102,10 @@ public class SnowflakeConfigLoader {
   }
 
   /**
-   * This method load the JSON file given at the path snowflakeRequestBodyJSONPath. File basically
-   * contains the request body of different requests. This method loads the file and create a map of
-   * request and its body which gets used by application.
+   * This method load the JSON file given at the path defined by variable
+   * snowflakeRequestBodyJSONPath. File basically contains the request body of different requests.
+   * This method loads the file and create a map of request and its body which gets used by
+   * application.
    */
   @Bean
   public void loadSnowflakeRequestBody() {
@@ -97,8 +113,10 @@ public class SnowflakeConfigLoader {
     try {
       ObjectMapper objectMapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
-      File file = new File(snowflakeRequestBodyJSONPath);
-      Map<String, String> inputValue = objectMapper.readValue(file, Map.class);
+      log.info("File path for Snowflake request body JSON file:{}", snowflakeRequestBodyJSONPath);
+
+      Resource resource = getResourceHelper(snowflakeRequestBodyJSONPath);
+      Map<String, String> inputValue = objectMapper.readValue(resource.getInputStream(), Map.class);
       snowflakeUnloadDataRequestBody = new HashMap<>();
 
       for (Map.Entry<String, String> entry : inputValue.entrySet()) {
@@ -111,8 +129,9 @@ public class SnowflakeConfigLoader {
       }
     } catch (Exception e) {
       log.error(
-          "Error while loading the file contains Snowflake unload data request from the path :{}",
-          snowflakeRequestBodyJSONPath);
+          "Error while loading the file contains Snowflake unload data request from the path :{}\nStack Trace:",
+          snowflakeRequestBodyJSONPath,
+          e);
       log.error("Error Message::{}", e.getMessage());
       throw new SnowflakeConnectorException(
           ErrorCode.SNOWFLAKE_CONFIG_LOADER.getMessage(),
@@ -139,5 +158,21 @@ public class SnowflakeConfigLoader {
    */
   public String getSnowflakeUnloadRequestBody(String requestName) {
     return snowflakeUnloadDataRequestBody.get(requestName);
+  }
+
+  /**
+   * Helper method to load the resource based on location either from classpath or from file path.
+   *
+   * @param resourcePath path of the resource to be loaded.
+   * @return @{@link Resource} object
+   */
+  private Resource getResourceHelper(String resourcePath) {
+    Resource resource;
+    if (resourcePath.startsWith("classpath:")) {
+      resource = new ClassPathResource(resourcePath.substring("classpath:".length()));
+    } else {
+      resource = new FileSystemResource(resourcePath);
+    }
+    return resource;
   }
 }

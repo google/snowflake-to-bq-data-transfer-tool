@@ -27,7 +27,7 @@ import lombok.Setter;
  */
 @Setter
 @Getter
-public class SFDataMigrationRequestDTO extends CommonRequestDTO {
+public class SFDataMigrationRequestDTO extends SFExtractAndTranslateDDLRequestDTO {
 
   @NotNull(message = "The isBQTableExits property must be true/false")
   private boolean bqTableExists;
@@ -43,7 +43,7 @@ public class SFDataMigrationRequestDTO extends CommonRequestDTO {
 
   @Override
   public String toString() {
-    String commonDTOString = super.toString();
+    String sfExtractAndTranslateDDLString = super.toString();
     return "SFDataMigrationRequestDTO{"
         + "bqTableExists="
         + bqTableExists
@@ -51,7 +51,7 @@ public class SFDataMigrationRequestDTO extends CommonRequestDTO {
         + snowflakeStageLocation
         + '\''
         + ", "
-        + commonDTOString
+        + sfExtractAndTranslateDDLString
         + '}';
   }
 }

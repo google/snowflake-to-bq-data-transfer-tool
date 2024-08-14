@@ -18,7 +18,10 @@ package com.google.connector.snowflakeToBQ.service.async;
 
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
 import com.google.connector.snowflakeToBQ.model.OperationResult;
+import com.google.connector.snowflakeToBQ.model.datadto.SnowflakeUnloadToGCSDataDTO;
 import com.google.connector.snowflakeToBQ.service.SnowflakesService;
+
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,44 +48,45 @@ public class SnowflakeUnloadToGCSAsyncService {
    * Method to perform the Snowflake table data unloading to GCS in Asynchronous way. Here
    * "customExecutor" annotation is used which defined the Thread executor and its property.
    *
-   * @param tableName name of the table to be unloaded from Snowflake
-   * @param snowflakeStageLocation staging location given in the copy into command. This will be the
-   *     GCS path which gets configured beforehand
-   * @param snowflakeFileFormatValue Snowflake format in which data will be unloaded like Parquet,
-   *     CSV
+   * @param snowflakeUnloadToGCSDataDTO DTO containing the details related to snowflake Unload data
+   *     to GCS step.
+   * @param requestLogId MDC request ID
    * @return @{@link CompletableFuture} result of the execution, success or fail
    */
   @Async("customExecutor")
   public CompletableFuture<OperationResult<String>> snowflakeUnloadToGCS(
-      String tableName,
-      String snowflakeStageLocation,
-      String snowflakeFileFormatValue,
-      String requestLogId) {
+      SnowflakeUnloadToGCSDataDTO snowflakeUnloadToGCSDataDTO, String requestLogId) {
 
     // We are using Aysnc method here so the method which is calling it can not pass its context to
-    // this method directly and requestId was coming as null which was set in controller. Hence we
+    // this method directly and requestId was coming as null which was set in controller. Hence, we
     // have saved it in the application data and used it to set again in this method in MDC. This
     // way any following method call from this method will log that entry, and we will get same
     // requestId logged from Controller till the end of all the calls.
-
-    MDC.put("requestLogId", requestLogId);
+    String newMDCRequestId =
+        requestLogId + ":" + UUID.randomUUID() + ":" + snowflakeUnloadToGCSDataDTO.getTableName();
+    MDC.put("requestLogId", newMDCRequestId);
 
     log.info("Inside SnowflakeUnloadToBQLoad() of SnowflakeUnloadToGCSAsyncService");
     try {
       String snowflakeStatementHandle =
-          snowflakesService.executeUnloadDataCommand(
-              tableName, snowflakeStageLocation, snowflakeFileFormatValue);
+          snowflakesService.executeUnloadDataCommand(snowflakeUnloadToGCSDataDTO);
       log.info(
           "Snowflake statement handle:: {}, for table name:: {}",
           snowflakeStatementHandle,
-          tableName);
+          snowflakeUnloadToGCSDataDTO.getTableName());
     } catch (SnowflakeConnectorException e) {
+      log.error("Stack Trace:", e);
       return CompletableFuture.completedFuture(
           new OperationResult<>(
               new OperationResult.Error(
-                  String.format("Table:%s,%s,%s", tableName, e.getMessage(), e.getErrorCode()))));
+                  String.format(
+                      "Table:%s,%s,%s",
+                      snowflakeUnloadToGCSDataDTO.getTableName(),
+                      e.getMessage(),
+                      e.getErrorCode()))));
     }
     MDC.remove("requestLogId");
-    return CompletableFuture.completedFuture(new OperationResult<>(tableName));
+    return CompletableFuture.completedFuture(
+        new OperationResult<>(snowflakeUnloadToGCSDataDTO.getTableName()));
   }
 }

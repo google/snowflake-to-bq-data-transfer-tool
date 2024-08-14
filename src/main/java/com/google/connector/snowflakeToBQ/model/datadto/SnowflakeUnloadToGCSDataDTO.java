@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.google.connector.snowflakeToBQ.model.request;
+package com.google.connector.snowflakeToBQ.model.datadto;
 
-import javax.validation.constraints.NotBlank;
+import com.google.connector.snowflakeToBQ.model.request.SFDataMigrationRequestDTO;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -26,10 +26,16 @@ import lombok.Setter;
  */
 @Setter
 @Getter
-public class SnowflakeUnloadToGCSRequestDTO extends CommonRequestDTO {
-  @NotBlank(message = "Snowflake stage location can not be blank")
+public class SnowflakeUnloadToGCSDataDTO {
   private String snowflakeStageLocation;
 
-  @NotBlank(message = "Snowflake file format can not be blank")
+  private String databaseName;
+
+  private String schemaName;
+
+  private String tableName;
+
+  private String warehouse;
+
   private String snowflakeFileFormatValue;
 }

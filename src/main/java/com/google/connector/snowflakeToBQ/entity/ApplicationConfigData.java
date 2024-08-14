@@ -50,6 +50,9 @@ public class ApplicationConfigData implements Serializable {
   @Column(name = "target_table_name")
   private String targetTableName;
 
+  @Column(name = "warehouse")
+  private String warehouse;
+
   @Column(name = "is_schema")
   boolean isSchema;
 

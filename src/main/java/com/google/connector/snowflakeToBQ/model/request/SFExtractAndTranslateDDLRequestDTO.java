@@ -19,10 +19,46 @@ package com.google.connector.snowflakeToBQ.model.request;
 import lombok.Getter;
 import lombok.Setter;
 
+import javax.validation.constraints.NotBlank;
+
 /**
- * This class is just a marker class. All its request parameter are present in common request dto.
- * It's used in Extract and Translate DDL flow
+ * This class holds Snowflake extract ddl and translate request parameters. It's used in Extract and
+ * Translate DDL flow
  */
 @Setter
 @Getter
-public class SFExtractAndTranslateDDLRequestDTO extends CommonRequestDTO {}
+public class SFExtractAndTranslateDDLRequestDTO extends CommonRequestDTO {
+
+  @NotBlank(message = "GCS bucket name for DDLs can not be empty")
+  private String gcsBucketForDDLs;
+
+  @NotBlank(message = "target database name can not be empty")
+  private String targetDatabaseName;
+
+  @NotBlank(message = "Target schema name can not be empty")
+  private String targetSchemaName;
+
+  @NotBlank(message = "GCS bucket for  translated DDLs can not be empty")
+  private String gcsBucketForTranslation;
+
+  @Override
+  public String toString() {
+    String commonRequestDTO = super.toString();
+    return "SFExtractAndTranslateDDLRequestDTO{"
+        + "gcsBucketForDDLs='"
+        + gcsBucketForDDLs
+        + '\''
+        + ", targetDatabaseName='"
+        + targetDatabaseName
+        + '\''
+        + ", targetSchemaName='"
+        + targetSchemaName
+        + '\''
+        + ", gcsBucketForTranslation='"
+        + gcsBucketForTranslation
+        + +'\''
+        + ", "
+        + commonRequestDTO
+        + '}';
+  }
+}

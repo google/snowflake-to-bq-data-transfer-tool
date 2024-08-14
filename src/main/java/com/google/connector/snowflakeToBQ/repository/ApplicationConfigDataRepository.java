@@ -18,6 +18,8 @@ package com.google.connector.snowflakeToBQ.repository;
 
 import com.google.connector.snowflakeToBQ.entity.ApplicationConfigData;
 import java.util.List;
+
+import com.google.connector.snowflakeToBQ.service.SnowflakeQueryExecutor;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.stereotype.Repository;
@@ -31,7 +33,7 @@ import org.springframework.stereotype.Repository;
 @EnableJpaRepositories(
     basePackageClasses = {
       ApplicationConfigDataRepository.class,
-      SnowflakesJdbcDataRepository.class
+      SnowflakeQueryExecutor.class
     })
 public interface ApplicationConfigDataRepository
     extends JpaRepository<ApplicationConfigData, Long> {

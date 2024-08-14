@@ -26,6 +26,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -79,8 +81,8 @@ public class GoogleCloudStorageService {
           // tablename, including these details helps during translation. By providing translation
           // mapping these values will get replaced with BigQuery specific value
           ddl =
-              ddl.replace(
-                  tableName,
+              replaceSnowflakeTableNameWithBQ(
+                  ddl,
                   String.format(
                       "%s.%s.%s",
                       gcsDetailsDataDTO.getSourceDatabaseName(),
@@ -170,8 +172,9 @@ public class GoogleCloudStorageService {
               .delete(translationGcsFolder, databaseName + "/");
       log.info("Root folder of the bucket path::{}, deleted::{}", databaseName, deleteStatus);
       moveFolderStatus = true;
-      System.out.println("Folder copied successfully.");
+      log.info("Folder copied successfully.");
     } catch (Exception e) {
+      log.error("Error occured during moveFolder() execution", e);
       throw new SnowflakeConnectorException(e.getMessage(), 0);
     }
     return moveFolderStatus;
@@ -197,5 +200,39 @@ public class GoogleCloudStorageService {
   private BlobInfo createFolder(String bucketName, String folderName) {
     BlobInfo folderInfo = BlobInfo.newBuilder(BlobId.of(bucketName, folderName + "/")).build();
     return storageInstanceCreator.getStorageClient().create(folderInfo);
+  }
+
+  /**
+   * Replaces the Snowflake table name in a given DDL statement with a new BigQuery table
+   * name(dataset.tablename).
+   *
+   * <p>This method uses regular expressions to identify and replace the table name. It will always
+   * add just one space after "table" keyword irrespective of the number of spaces it had.
+   *
+   * @param ddl The original DDL statement containing the Snowflake table name.
+   * @param newTableName The new BigQuery table name to replace the existing one.
+   * @return The modified DDL statement with the Snowflake table name replaced.
+   */
+  private String replaceSnowflakeTableNameWithBQ(String ddl, String newTableName) {
+    // Compile the regular expression pattern:
+    // - ((?i)TABLE) : Captures the "TABLE" keyword (case-insensitively) into group 1
+    // - \s+         : Matches one or more whitespace characters
+    // - (\w+)        : Captures the table name (word characters) into group 2
+
+    Pattern pattern = Pattern.compile("((?i)TABLE)\\s+(\\w+)");
+
+    // Create a Matcher to find matches of the pattern within the DDL
+    Matcher matcher = pattern.matcher(ddl);
+
+    // Replace each match with:
+    // - $1: The content of group 1 (the original "TABLE" keyword with its capitalization)
+    // -   : A space
+    // - newTableName: The new table name provided as input
+    String newSqlStatement = matcher.replaceAll("$1 " + newTableName);
+    log.info(
+        "After replacing Snowflake table name with BQ table name::{}, SQL is::{}",
+        newTableName,
+        newSqlStatement);
+    return newSqlStatement;
   }
 }

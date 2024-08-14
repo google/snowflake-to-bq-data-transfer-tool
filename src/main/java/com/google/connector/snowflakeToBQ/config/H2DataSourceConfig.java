@@ -39,12 +39,14 @@ public class H2DataSourceConfig {
   private String password;
   private String driverClassName;
 
+  private static final String URL_PREFIX = "jdbc:h2:file:";
+
   @Primary
   @Bean
   public DataSource h2DataSource() {
     return DataSourceBuilder.create()
         .driverClassName(driverClassName)
-        .url(url)
+        .url(URL_PREFIX + url)
         .username(username)
         .password(password)
         .build();

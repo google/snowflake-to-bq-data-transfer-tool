@@ -17,7 +17,6 @@
 package com.google.connector.snowflakeToBQ.model.request;
 
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -35,23 +34,15 @@ public class CommonRequestDTO {
   @NotBlank(message = "Source schema name can not be empty")
   private String sourceSchemaName;
 
-  @NotBlank(message = "target database name can not be empty")
-  private String targetDatabaseName;
-
-  @NotBlank(message = "Target schema name can not be empty")
-  private String targetSchemaName;
-
   @NotBlank(message = "Source table name can not be empty")
   private String sourceTableName;
 
-  @NotBlank(message = "GCS bucket name for DDLs can not be empty")
-  private String gcsBucketForDDLs;
-
-  @NotNull(message = "The isSchema property must be true/false")
+  // TODO decide if we need to implement isSchema for SnowflakeUnload request and based on that add
+  // validation, current its commented as its a common property.
   private boolean schema;
 
-  @NotBlank(message = "GCS bucket for  translated DDLs can not be empty")
-  private String gcsBucketForTranslation;
+  @NotBlank(message = "warehouse can not be empty")
+  private String warehouse;
 
   private String location;
 
@@ -64,24 +55,15 @@ public class CommonRequestDTO {
         + ", sourceSchemaName='"
         + sourceSchemaName
         + '\''
-        + ", targetDatabaseName='"
-        + targetDatabaseName
-        + '\''
-        + ", targetSchemaName='"
-        + targetSchemaName
-        + '\''
         + ", sourceTableName='"
         + sourceTableName
         + '\''
-        + ", gcsBucketForDDLs='"
-        + gcsBucketForDDLs
-        + '\''
         + ", schema="
         + schema
-        + ", gcsBucketForTranslation='"
-        + gcsBucketForTranslation
+        + ", warehouse='"
+        + warehouse
         + '\''
-        + ", translationJobLocation='"
+        + ", location='"
         + location
         + '\''
         + '}';

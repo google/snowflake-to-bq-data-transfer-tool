@@ -70,7 +70,8 @@ public class EncryptValues {
       return new EncryptedData(
           Base64.getEncoder().encodeToString(combined), secretKey, ivParameterSpec.getIV());
     } catch (Exception e) {
-      log.error("Error while encrypting the received value, Error:{}", e.getMessage());
+      log.error(
+          "Error while encrypting the received value, Error:{}\nStack Trace:", e.getMessage(), e);
       throw new SnowflakeConnectorException(
           e.getMessage(), ErrorCode.ENCRYPTION_ERROR.getErrorCode());
     }
@@ -108,7 +109,8 @@ public class EncryptValues {
 
       return new String(decryptedData, StandardCharsets.UTF_8);
     } catch (Exception e) {
-      log.error("Error while decrypting the received value, Error:{}", e.getMessage());
+      log.error(
+          "Error while decrypting the received value, Error:{}\nStack Trace:", e.getMessage(), e);
       throw new SnowflakeConnectorException(
           e.getMessage(), ErrorCode.DECRYPTION_ERROR.getErrorCode());
     }

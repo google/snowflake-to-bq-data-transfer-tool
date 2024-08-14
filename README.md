@@ -8,8 +8,6 @@
 This tool helps in transferring(migrating) the Snowflake data(Schema,Table) to BigQuery. \
 It can help in automating the historical load migration.
 
-# Quick Start
-
 ## Prerequisites:
 * [gcloud CLI](https://cloud.google.com/sdk/gcloud)
 * Maven
@@ -30,7 +28,7 @@ This helps ensure segregation from other entities in the environment. The code i
 This script is provided as a reference for generating necessary users, roles, and other entities. Prior to any action, it's recommended to seek \
 guidance from your enterprise's security and administrative teams, as the script is intended for reference purposes only.
 
-**[Script file](docs/snowflake-object-creation.txt)**
+**[Snowflake Object Creation Script](docs/snowflake-object-creation.txt)**
 
 ## Setting up authentication
 Below steps can be followed for setting up authentication & authorization:
@@ -68,49 +66,98 @@ OAUTH_AUTHORIZATION_ENDPOINT=Auth URL and OAUTH_TOKEN_ENDPOINT= Access Token URL
 * This refresh token will be encrypted in the tool, tool will keep on refreshing the token  and get new access token until the max duration \ 
   which is set in security integration against key OAUTH_REFRESH_TOKEN_VALIDITY expires.
 
-## Build the tool
+# Quick Start JAR
+For a deployment tailored to specific requirements, building the JAR file from source code using custom properties is advised.
+For a quick trial or exploration, running the provided JAR file is also possible.
+
+To run the tool use the [cloud shell](https://cloud.google.com/shell/docs/launching-cloud-shell#launch_from_the) terminal. It has all the
+pre-requisites.
+
+### Download repo and prebuilt jar.
+```
+# in cloud shell terminal
+gcloud auth application-default login
+wget https://github.com/GoogleCloudPlatform
+
+# in cloud shell terminal
+wget https://github.com/google/snowflake-to-bq-data-transfer-tool/releases/download/v1.0.0/snowflake-to-bq-data-transfer.jar
+```
+
+Run tool for simple inline query
+```
+# in cloud shell terminal
+java -jar snowflake-to-bq-data-transfer-1.0.0.jar --spring.datasource.h2.url=./app_data \
+--snowflake.account.url={SNOWFLAKE_URL} --gcs.storage.integration=MIGRATION_INTEGRATION --service.account.file.path={Path of service account}"
+```
+* **service.account.file.path:** This property can be skipped if running using user account.
+
+## Custom Jar Build
 * Update the [application.properties](src/main/resources/application.properties) file based on your Snowflake instance and need. The properties file contains \
   descriptions for each property. 
 * Modify the files' [snowflake_request_body.json](src/main/resources/snowflake_request_body.json) and [snowflake_table_query_mapping.json](src/main/resources/snowflake_table_query_mapping.json) based
-  on the needs and the environment values.
+  on the needs else skip it.
 * Build the code from src and pom.xml directory level
 ```
 mvn clean package 
 ```
 
-## Start the tool
-* After building the tool, it can be started using the command ```java -jar {path to the jar}```. After following the step \
-  mentioned in [Build tool](#build-tool) step, the tool jar will be generated in the target folder. This jar is \
-  executable across any JRE 11-compatible environments.
-* Tool allows you to provide property values during application startup, eliminating the need to repeatedly build the JAR file.
+## Launch The Custom Jar
+* Once built, the tool can be launched with the command  ```java -jar {path to the jar}```. The executable JAR, found in the target folder after \
+  the Build tool steps, runs on any JRE 11+ environment.
+* The tool supports dynamic property configuration at startup, eliminating the need for repetitive JAR file rebuilds.
 * Example
 ```
 java -jar {PATH OF JAR } --snowflake.table.query.mapping.path=/Users/tests/snowflake_table_query_mapping.json \
 --snowflake.request.body.json.path=/Users/tests/snowflake_request_body.json --snowflake.account.url=https://<account-name>.us-east-1.snowflakecomputing.com \
---jdbc.url=jdbc:snowflake://https:/<account-name>.us-east-1.snowflakecomputing.com --spring.datasource.h2.url=jdbc:h2:file:/Users/tests/db
+--spring.datasource.h2.url=/Users/tests/db ....
 ```
-* Once the tool is started, it can accept rest calls. User can use postman or curl command to execute the rest API calls.
+* Upon startup, the tool is ready to process REST calls. Users can leverage tools like Postman or curl commands to interact with the exposed REST API endpoints.
 
 ## APIs
-SFBQDT provides different APIs for data transfer,for detailed information please refer to [docs/REST_API.md](docs/REST_API.md)
-
+SFBQDT offers various APIs designed for data transfer purposes. To explore these APIs in depth, please refer to the provided documentation [docs/REST_API.md](docs/REST_API.md)
 
 ## State Management
 
-The tool manages the execution state, allowing it to resume from the last successful step in case of failure. It employs the\
-[H2 Database](https://www.h2database.com/html/main.html) in embedded mode, storing data in a file mode at the location specified in the application.properties file.
+The tool maintains execution state, enabling it to restart from the last successful point should any failures occur. It utilizes an embedded [H2 Database](https://www.h2database.com/html/main.html), \
+storing data in a file at the location defined within the 'application.properties' file.
 
 ### Connect to H2 Database
 * User can connect to H2 Database using the link ```http://localhost:8080/h2-console/login.do``` after starting the tool on same machine.
-* User can key in the required credential which is set in application.properties.
+* User can key in the required credential which is set in application.properties. Default username and password is **SF_EMBEDDED/SF_EMBEDDED**
 
   <img src="images/h2-login-page.png" alt="Alt Text" height="300" width="400">
 
-* All data is stored within the table named **APPLICATION_DATA**.
+* All data is stored within the table named **APPLICATION_DATA**. Below is the schema for the example table:
 
-  <img src="images/h2-table.png" alt="Alt Text" height="700" width="400">
-
-  <img src="images/h2-table-data.png" alt="Alt Text" height="300" width="2000">
+| COLUMN_NAME                       | DATA_TYPE         | CHARACTER_MAXIMUM_LENGTH | IS_NULLABLE |
+|-----------------------------------|-------------------|--------------------------|-------------|
+| ID                                | BIGINT            |                          | NO          |
+| BQ_LOAD_FORMAT                    | CHARACTER VARYING | 255                      | YES         |
+| CREATED_TIME                      | CHARACTER VARYING | 255                      | YES         |
+| GCS_BUCKET_FOR_DDLS               | CHARACTER VARYING | 255                      | YES         |
+| GCS_BUCKET_FOR_TRANSLATION        | CHARACTER VARYING | 255                      | YES         |
+| IS_TABLE_CREATED                  | BOOLEAN           |                          | YES         |
+| IS_DATA_LOADED_IN_BQ              | BOOLEAN           |                          | YES         |
+| IS_DATA_UNLOADED_FROM_SNOWFLAKE   | BOOLEAN           |                          | YES         |
+| IS_ROW_PROCESSING_DONE            | BOOLEAN           |                          | YES         |
+| IS_SCHEMA                         | BOOLEAN           |                          | YES         |
+| IS_SOURCE_DDL_COPIED              | BOOLEAN           |                          | YES         |
+| IS_TRANSLATED_DDL_COPIED          | BOOLEAN           |                          | YES         |
+| LAST_UPDATED_TIME                 | CHARACTER VARYING | 255                      | YES         |
+| LOCATION                          | CHARACTER VARYING | 255                      | YES         |
+| REQUEST_LOG_ID                    | CHARACTER VARYING | 255                      | YES         |
+| SNOWFLAKE_FILE_FORMAT             | CHARACTER VARYING | 255                      | YES         |
+| SNOWFLAKE_STAGE_LOCATION          | CHARACTER VARYING | 255                      | YES         |
+| SNOWFLAKE_STATEMENT_HANDLE        | CHARACTER VARYING | 255                      | YES         |
+| SOURCE_DATABASE_NAME              | CHARACTER VARYING | 255                      | YES         |
+| SOURCE_SCHEMA_NAME                | CHARACTER VARYING | 255                      | YES         |
+| SOURCE_TABLE_NAME                 | CHARACTER VARYING | 255                      | YES         |
+| TARGET_DATABASE_NAME              | CHARACTER VARYING | 255                      | YES         |
+| TARGET_SCHEMA_NAME                | CHARACTER VARYING | 255                      | YES         |
+| TARGET_TABLE_NAME                 | CHARACTER VARYING | 255                      | YES         |
+| TRANSLATED_DDL_GCS_PATH           | CHARACTER VARYING | 255                      | YES         |
+| WAREHOUSE                         | CHARACTER VARYING | 255                      | YES         |
+| WORKFLOW_NAME                     | CHARACTER VARYING | 255                      | YES         |
 
 # Disclaimer
 This is not an officially supported Google product.

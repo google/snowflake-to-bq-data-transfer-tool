@@ -122,10 +122,11 @@ public class BigQueryOperationsService {
       }
     } catch (Exception e) {
       log.error(
-          "Error executing BigQuery load job for JobId::{} and application's row:{}, Error Message:{}",
+          "Error executing BigQuery load job for JobId::{} and application's row:{}, Error Message:{}\nStack Trace:",
           jobId.getJob(),
           bigqueryDetailsDto.getUniqueIdentifier(),
-          e.getMessage());
+          e.getMessage(),
+          e);
       throw new SnowflakeConnectorException(
           BQ_QUERY_JOB_EXECUTION_ERROR.getMessage(), BQ_QUERY_JOB_EXECUTION_ERROR.getErrorCode());
     }
@@ -209,9 +210,10 @@ public class BigQueryOperationsService {
       }
     } catch (Exception e) {
       log.error(
-          "Error while executing query job. Error Message:{},\n Sql Query:{} ",
+          "Error while executing query job. Error Message:{},\n Sql Query:{}\nStack Trace: ",
           e.getMessage(),
-          sql);
+          sql,
+          e);
       throw new SnowflakeConnectorException(
           BQ_QUERY_JOB_EXECUTION_ERROR.getMessage(), BQ_QUERY_JOB_EXECUTION_ERROR.getErrorCode());
     }

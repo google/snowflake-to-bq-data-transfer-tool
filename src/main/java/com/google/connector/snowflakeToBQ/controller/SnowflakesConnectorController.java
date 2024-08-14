@@ -18,9 +18,12 @@ package com.google.connector.snowflakeToBQ.controller;
 
 import static com.google.connector.snowflakeToBQ.util.PropertyManager.OUTPUT_FORMATTER1;
 
+import com.google.connector.snowflakeToBQ.cache.EasyCache;
 import com.google.connector.snowflakeToBQ.config.OAuthCredentials;
+import com.google.connector.snowflakeToBQ.mapper.MigrateRequestMapper;
 import com.google.connector.snowflakeToBQ.model.EncryptedData;
 import com.google.connector.snowflakeToBQ.model.OperationResult;
+import com.google.connector.snowflakeToBQ.model.datadto.SnowflakeUnloadToGCSDataDTO;
 import com.google.connector.snowflakeToBQ.model.request.SFDataMigrationRequestDTO;
 import com.google.connector.snowflakeToBQ.model.request.SFExtractAndTranslateDDLRequestDTO;
 import com.google.connector.snowflakeToBQ.model.request.SnowflakeUnloadToGCSRequestDTO;
@@ -42,6 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
@@ -61,6 +65,8 @@ public class SnowflakesConnectorController {
 
   final OAuthCredentials oauthCredentials;
 
+  final EasyCache<String, JdbcTemplate> jdbcTemplateEhcache;
+
   public SnowflakesConnectorController(
       EncryptValues encryptValues,
       TokenRefreshService tokenRefreshService,
@@ -68,7 +74,8 @@ public class SnowflakesConnectorController {
       OAuthCredentials oauthCredentials,
       ExtractAndTranslateDDLService extractDDLService,
       SnowflakeUnloadToGCSAsyncService snowflakeUnloadToGCSAsyncService,
-      ApplicationConfigDataService applicationConfigDataService) {
+      ApplicationConfigDataService applicationConfigDataService,
+      EasyCache<String, JdbcTemplate> jdbcTemplateEhcache) {
     this.encryptValues = encryptValues;
     this.tokenRefreshService = tokenRefreshService;
     this.snowflakeMigrateDataService = snowflakeMigrateDataService;
@@ -76,6 +83,7 @@ public class SnowflakesConnectorController {
     this.extractDDLService = extractDDLService;
     this.snowflakeUnloadToGCSAsyncService = snowflakeUnloadToGCSAsyncService;
     this.applicationConfigDataService = applicationConfigDataService;
+    this.jdbcTemplateEhcache = jdbcTemplateEhcache;
   }
 
   /**
@@ -131,17 +139,24 @@ public class SnowflakesConnectorController {
   @GetMapping("/process-failed-request")
   public ResponseEntity<?> processFailedRequest() {
     MDC.put(REQUEST_LOG_ID, UUID.randomUUID().toString());
-    List<Long> requestIds = snowflakeMigrateDataService.processFailedRequestMigratedRows();
-    MDC.remove(REQUEST_LOG_ID);
-    if (requestIds != null) {
-      return ResponseEntity.ok(
-          snowflakeMigrateDataService.getApplicationConfigDataByIds(requestIds));
-    } else {
+    try {
+      List<Long> requestIds = snowflakeMigrateDataService.processFailedRequestMigratedRows();
+
+      if (requestIds.isEmpty()) {
+        return ResponseEntity.ok()
+            .body("There are no failed requests that are eligible for reprocessing");
+      } else {
+        return ResponseEntity.ok(
+            snowflakeMigrateDataService.getApplicationConfigDataByIds(requestIds));
+      }
+    } catch (Exception e) {
       return ResponseEntity.internalServerError()
           .body(
               String.format(
                   "Internal server error while processing the request, please check the logs. Request Log Id:%s",
                   MDC.get(REQUEST_LOG_ID)));
+    } finally {
+      MDC.remove(REQUEST_LOG_ID);
     }
   }
 
@@ -176,21 +191,22 @@ public class SnowflakesConnectorController {
    *     * the flow is complete
    */
   @PostMapping("/snowflake-unload-to-gcs")
-  public ResponseEntity<Map<String, String>> snowFlakeUnloadToGCS(
+  public ResponseEntity<Map<String, String>> snowflakeUnloadToGCS(
       @NonNull @RequestBody @Valid SnowflakeUnloadToGCSRequestDTO snowflakeUnloadToGCSRequestDTO) {
     String requestLogId = UUID.randomUUID().toString();
     MDC.put(REQUEST_LOG_ID, requestLogId);
 
     List<CompletableFuture<OperationResult<String>>> asyncFutureResultList = new ArrayList<>();
-
+    String[] tableNames = snowflakeUnloadToGCSRequestDTO.getSourceTableName().split(",");
     // Executing all the request for each table in parallel(Async)
-    for (String tableName : snowflakeUnloadToGCSRequestDTO.getTableNames()) {
+    for (String tableName : tableNames) {
+      SnowflakeUnloadToGCSDataDTO snowflakeUnloadToGCSDataDTO =
+          MigrateRequestMapper.snowflakeUnloadToGCSRequestToSnowflakeUnloadToGCSDataDTO(
+              tableName, snowflakeUnloadToGCSRequestDTO);
+
       CompletableFuture<OperationResult<String>> asyncFutureResult =
           snowflakeUnloadToGCSAsyncService.snowflakeUnloadToGCS(
-              tableName,
-              snowflakeUnloadToGCSRequestDTO.getSnowflakeStageLocation(),
-              snowflakeUnloadToGCSRequestDTO.getSnowflakeFileFormatValue(),
-              requestLogId);
+              snowflakeUnloadToGCSDataDTO, requestLogId);
       asyncFutureResultList.add(asyncFutureResult);
     }
     Map<String, String> outputMap = new HashMap<>();
@@ -203,13 +219,14 @@ public class SnowflakesConnectorController {
           // Setting the processing of the row to done
           outputMap.put(tempOperationResult.getResult(), "Success");
         } else {
-          log.error("Error:Snowflake Unload and GCS");
+          log.error("Error:Snowflake Unload and GCS:{}", tempOperationResult.getErrorMessage());
           outputMap.put(tempOperationResult.getErrorMessage(), "Failed");
         }
       } catch (CompletionException e) {
         log.error(
-            "Exception while processing the Snowflake unload to GCS, error message:{}",
-            e.getMessage());
+            "Exception while processing the Snowflake unload to GCS, error message:{}\nStack Trace:",
+            e.getMessage(),
+            e);
         outputMap.put(e.getMessage(), "Failed");
       }
     }
@@ -244,6 +261,7 @@ public class SnowflakesConnectorController {
     // execution. Using the below line, when user set the new value it will be refreshed, so the map
     // will  contain  the new access token value.
     tokenRefreshService.refreshToken();
+    jdbcTemplateEhcache.clear();
     String message =
         String.format(
             "OAUTH credentials have been successfully saved at %s,Request Log Id:%s",
@@ -274,7 +292,8 @@ public class SnowflakesConnectorController {
   }
 
   /**
-   * Method to encrypt any received values in map. It then returns the encrypted value to the called.
+   * Method to encrypt any received values in map. It then returns the encrypted value to the
+   * called.
    *
    * @param data Map containing the values to be encrypted
    * @return encrypted value map.

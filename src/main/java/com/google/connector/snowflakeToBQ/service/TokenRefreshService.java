@@ -96,7 +96,7 @@ public class TokenRefreshService {
           .put("accessToken", encryptDecryptValues.encryptValue(response.getAccessToken()));
       return response;
     } catch (Exception e) {
-      log.error("Error while refreshing the token:{}", e.getMessage());
+      log.error("Error while refreshing the token:{}\nStack Trace:", e.getMessage(), e);
       throw new SnowflakeConnectorException(e.getMessage(), TOKEN_REFRESH_ERROR.getErrorCode());
     }
   }

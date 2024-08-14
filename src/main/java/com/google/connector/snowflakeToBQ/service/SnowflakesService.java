@@ -18,6 +18,7 @@ package com.google.connector.snowflakeToBQ.service;
 
 import com.google.connector.snowflakeToBQ.config.SnowflakeConfigLoader;
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
+import com.google.connector.snowflakeToBQ.model.datadto.SnowflakeUnloadToGCSDataDTO;
 import com.google.connector.snowflakeToBQ.model.response.SnowflakeResponse;
 import com.google.connector.snowflakeToBQ.util.ErrorCode;
 import lombok.Getter;
@@ -27,6 +28,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.google.connector.snowflakeToBQ.util.PropertyManager.SNOWFLAKE_STATEMENT_POST_REST_API;
 
@@ -41,38 +45,28 @@ public class SnowflakesService {
   @Getter
   String snowflakeAccountURl;
 
+  @Value("${gcs.storage.integration}")
+  @Setter
+  @Getter
+  String gcsStorageIntegration;
+
   public SnowflakesService(
-      RestAPIExecutionService restService,
-      SnowflakeConfigLoader snowflakeConfigLoader) {
+      RestAPIExecutionService restService, SnowflakeConfigLoader snowflakeConfigLoader) {
     this.restService = restService;
     this.snowflakeConfigLoader = snowflakeConfigLoader;
   }
 
-  public String executeUnloadDataCommand(
-      String tableName, String copyIntoGCSUnloadPath, String snowflakeFileFormatValue) {
-    // TODO Remove this temporary logic
-    String snowflakeQuery = tableName;
-    if (!StringUtils.isEmpty(snowflakeConfigLoader.getQuery(tableName))) {
-      snowflakeQuery = "(" + snowflakeConfigLoader.getQuery(tableName) + ")";
-    }
+  public String executeUnloadDataCommand(SnowflakeUnloadToGCSDataDTO snowflakeUnloadToGCSDataDTO) {
 
-    // Replacing the values in above string variable.
     String command =
-        String.format(
+        resolvePlaceholders(
             snowflakeConfigLoader.getSnowflakeUnloadRequestBody("UnloadDataRequest"),
-            tableName,
-            copyIntoGCSUnloadPath,
-            tableName,
-            snowflakeFileFormatValue,
-            tableName,
-            tableName,
-            snowflakeQuery);
+            getPlaceHoldersMap(snowflakeUnloadToGCSDataDTO));
     log.info("Snowflake Command to be executed from Rest API:{}", command);
 
     SnowflakeResponse response =
         restService
-            .executePostAndPoll(
-                snowflakeAccountURl + SNOWFLAKE_STATEMENT_POST_REST_API, command)
+            .executePostAndPoll(snowflakeAccountURl + SNOWFLAKE_STATEMENT_POST_REST_API, command)
             .block();
     log.info("Snowflake Copy Into command rest API execution response:{}", response);
 
@@ -86,7 +80,8 @@ public class SnowflakesService {
     if (!response.getMessage().equals("Statement executed successfully.")) {
       boolean pollReturnValue =
           restService.pollWithTimeout(
-             snowflakeAccountURl + SNOWFLAKE_STATEMENT_POST_REST_API, response.getStatementHandle());
+              snowflakeAccountURl + SNOWFLAKE_STATEMENT_POST_REST_API,
+              response.getStatementHandle());
       log.info(
           "Snowflake polling statement handle command rest API execution result:{}",
           pollReturnValue);
@@ -96,7 +91,61 @@ public class SnowflakesService {
             ErrorCode.SNOWFLAKE_REST_API_POLL_ERROR.getErrorCode());
       }
     }
-    log.info("Copy into command successfully executed for table :{}", tableName);
+    log.info(
+        "Copy into command successfully executed for table :{}",
+        snowflakeUnloadToGCSDataDTO.getTableName());
     return response.getStatementHandle();
+  }
+
+  /**
+   * Replaces placeholders in the given content with values from the provided map.
+   *
+   * <p>This method looks for placeholders in the format "{{PLACEHOLDER_NAME}}" within the provided
+   * content string and replaces them with the corresponding values from the map. If a placeholder
+   * is not found in the map, it is left unchanged in the content.
+   *
+   * @param content The string content containing placeholders to be replaced. The placeholders
+   *     should be in the format "{{PLACEHOLDER_NAME}}".
+   * @param values A map containing placeholder names and their corresponding replacement values.
+   *     The keys in the map should match the placeholder names without the surrounding curly
+   *     braces.
+   * @return The content string with placeholders replaced by their corresponding values from the
+   *     map.
+   */
+  private String resolvePlaceholders(String content, Map<String, String> values) {
+    for (Map.Entry<String, String> entry : values.entrySet()) {
+      content = content.replace("{{" + entry.getKey() + "}}", entry.getValue());
+    }
+    return content;
+  }
+
+  /**
+   * Method to return placeholders map which contains all the placeholder which will get replaced
+   * with the value in the snowflake_request_body.json. Key of the map is actual place holders and
+   * value of the map is the replacement value.
+   *
+   * @param snowflakeUnloadToGCSDataDTO dto containing data related to Snowflake unload request.
+   * @return @{@link Map} of place holders.
+   */
+  private Map<String, String> getPlaceHoldersMap(
+      SnowflakeUnloadToGCSDataDTO snowflakeUnloadToGCSDataDTO) {
+    Map<String, String> placeHolders = new HashMap<>();
+
+    placeHolders.put("WAREHOUSE", snowflakeUnloadToGCSDataDTO.getWarehouse());
+    placeHolders.put("TABLE_NAME", snowflakeUnloadToGCSDataDTO.getTableName());
+    placeHolders.put("DATABASE", snowflakeUnloadToGCSDataDTO.getDatabaseName());
+    placeHolders.put("SCHEMA", snowflakeUnloadToGCSDataDTO.getSchemaName());
+    placeHolders.put("STAGE_LOCATION", snowflakeUnloadToGCSDataDTO.getSnowflakeStageLocation());
+    placeHolders.put("FILE_FORMAT", snowflakeUnloadToGCSDataDTO.getSnowflakeFileFormatValue());
+    placeHolders.put("STORAGE_INTEGRATION", gcsStorageIntegration);
+
+    String snowflakeQuery = snowflakeUnloadToGCSDataDTO.getTableName();
+    if (!StringUtils.isEmpty(
+        snowflakeConfigLoader.getQuery(snowflakeUnloadToGCSDataDTO.getTableName()))) {
+      snowflakeQuery =
+          "(" + snowflakeConfigLoader.getQuery(snowflakeUnloadToGCSDataDTO.getTableName()) + ")";
+    }
+    placeHolders.put("SNOWFLAKE_QUERY", snowflakeQuery);
+    return placeHolders;
   }
 }
