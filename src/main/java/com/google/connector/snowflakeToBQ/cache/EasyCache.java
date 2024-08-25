@@ -2,6 +2,8 @@ package com.google.connector.snowflakeToBQ.cache;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import com.google.connector.snowflakeToBQ.repository.ClosableResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,7 +38,13 @@ public class EasyCache<K, V> {
           protected boolean removeEldestEntry(Map.Entry<K, CacheObject<V>> eldest) {
             // Remove the eldest entry if size exceeds maxSize
             log.info("Current cache size:{}", cache.size());
-            return size() > maxSize;
+            if (size() > maxSize) {
+              // Closing the resources if required
+              closeIfNecessary(eldest.getValue().value);
+              return true;
+            }
+            // return false if size is within the limit of maxsize
+            return false;
           }
         };
   }
@@ -69,6 +77,11 @@ public class EasyCache<K, V> {
           key,
           this.ttlMillis,
           cache.size());
+      CacheObject<V> oldCacheObject = cache.get(key);
+      if (oldCacheObject != null) {
+        // Closing the resources if required
+        closeIfNecessary(oldCacheObject.value);
+      }
       cache.remove(key);
       return null;
     }
@@ -76,7 +89,21 @@ public class EasyCache<K, V> {
 
   /** Clears all entries from the cache. */
   public synchronized void clear() {
+    cache.values().forEach(cacheObject -> closeIfNecessary(cacheObject.value));
     cache.clear();
+  }
+
+  /**
+   * This method closes the resources(values) in the cache, if they are closable(implementing
+   * the @{@link ClosableResource}) interface. If the object saved is not closable then this method
+   * will just pass.
+   *
+   * @param value The value of the map, which is the cacheed object.
+   */
+  private void closeIfNecessary(V value) {
+    if (value instanceof ClosableResource) {
+      ((ClosableResource) value).closeResource();
+    }
   }
 
   /**
