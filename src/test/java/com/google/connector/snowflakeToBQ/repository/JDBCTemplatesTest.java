@@ -36,18 +36,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.util.ReflectionTestUtils;
 
 public class JDBCTemplatesTest extends AbstractTestBase {
 
   @Autowired JdbcTemplateProvider jdbcTemplates;
   @MockBean TokenRefreshService tokenRefreshService;
   @MockBean OAuthCredentials oauthCredentials;
-  @MockBean EasyCache<String, JdbcTemplate> jdbcTemplateCache;
+  @MockBean EasyCache<String, ClosableJdbcTemplate> jdbcTemplateCache;
 
   @MockBean EncryptValues encryptDecryptValues;
 
-  @Mock JdbcTemplate template;
+  @Mock ClosableJdbcTemplate template;
 
   @Test
   public void testSetJdbcTemplateCacheHasNoData() {
@@ -63,7 +62,9 @@ public class JDBCTemplatesTest extends AbstractTestBase {
     when(tokenRefreshService.refreshToken()).thenReturn(new TokenResponse());
     when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("decrept-token");
 
-    // Call the method under test
+    // Call the method under test. Below conditions are true during execution as per mock setting
+    // oauthCredentials.getOauthMap().get("accessToken") == null =true
+    // StringUtils.isEmpty( oauthCredentials.getOauthMap().get("accessToken").getCiphertext()) =true
     JdbcTemplate jdbcTemplate = jdbcTemplates.getOrCreateJdbcTemplate(databaseName, schemaName);
     Assert.assertNotNull(jdbcTemplate);
     Assert.assertEquals(2, ((HikariDataSource) jdbcTemplate.getDataSource()).getMaximumPoolSize());
@@ -85,9 +86,70 @@ public class JDBCTemplatesTest extends AbstractTestBase {
     when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("decrept-token");
 
     // Call the method under test
+    // Call the method under test. Below conditions are true/false during execution as per mock setting
+    // oauthCredentials.getOauthMap().get("accessToken") == null =true
+    // StringUtils.isEmpty( oauthCredentials.getOauthMap().get("accessToken").getCiphertext()) =false
+
     JdbcTemplate jdbcTemplate = jdbcTemplates.getOrCreateJdbcTemplate(databaseName, schemaName);
     Assert.assertNotNull(jdbcTemplate);
     Assert.assertEquals(2, ((HikariDataSource) jdbcTemplate.getDataSource()).getMaximumPoolSize());
+    Assert.assertEquals("decrept-token", ((HikariDataSource) jdbcTemplate.getDataSource()).getDataSourceProperties().get("token"));
+  }
+
+  @Test
+  public void testSetJdbcTemplateCacheHasNoDataOauthRefreshScenario() {
+    String databaseName = "new_database";
+    String schemaName = "test_schema";
+
+    when(jdbcTemplateCache.get(eq(databaseName + schemaName))).thenReturn(null);
+    EncryptedData encryptedDataMock = mock(EncryptedData.class);
+    when(encryptedDataMock.getCiphertext()).thenReturn("access-token");
+
+    Map mapMock = mock(HashMap.class);
+    // setting the first part of the if condition in main method true
+    when(oauthCredentials.getOauthMap()).thenReturn(mapMock);
+    when(mapMock.get("accessToken")).thenReturn(encryptedDataMock);
+    // setting ciphertext to empty to make the second part of the if condition in main
+    // method false
+    when(encryptedDataMock.getCiphertext()).thenReturn("");
+    when(tokenRefreshService.refreshToken()).thenReturn(new TokenResponse());
+    when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("decrept-token");
+
+    // Call the method under test. Below conditions are true/false during execution as per mock setting
+    // oauthCredentials.getOauthMap().get("accessToken") == null =false
+    // StringUtils.isEmpty( oauthCredentials.getOauthMap().get("accessToken").getCiphertext()) =true
+    JdbcTemplate jdbcTemplate = jdbcTemplates.getOrCreateJdbcTemplate(databaseName, schemaName);
+    Assert.assertNotNull(jdbcTemplate);
+    Assert.assertEquals(2, ((HikariDataSource) jdbcTemplate.getDataSource()).getMaximumPoolSize());
+    Assert.assertEquals("decrept-token", ((HikariDataSource) jdbcTemplate.getDataSource()).getDataSourceProperties().get("token"));
+  }
+
+  @Test
+  public void testSetJdbcTemplateCacheHasNoDataOauthRefreshScenario1() {
+    String databaseName = "new_database";
+    String schemaName = "test_schema";
+
+    when(jdbcTemplateCache.get(eq(databaseName + schemaName)))
+            .thenReturn(null); // Simulate cache miss
+    EncryptedData encryptedDataMock = mock(EncryptedData.class);
+
+    Map mapMock = mock(HashMap.class);
+    // setting the first part of the if condition in main method true
+    when(oauthCredentials.getOauthMap()).thenReturn(mapMock);
+    when(mapMock.get("accessToken")).thenReturn(encryptedDataMock);
+    // setting ciphertext to return some value to make the second part of the if condition in main
+    // method true
+    when(encryptedDataMock.getCiphertext()).thenReturn("access-token-value");
+
+    when(tokenRefreshService.refreshToken()).thenReturn(new TokenResponse());
+    when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("decrept-token");
+
+    // Call the method under test. Below conditions are false during execution as per mock setting
+    // oauthCredentials.getOauthMap().get("accessToken") == null =false
+    // StringUtils.isEmpty( oauthCredentials.getOauthMap().get("accessToken").getCiphertext()) =false
+    JdbcTemplate jdbcTemplate = jdbcTemplates.getOrCreateJdbcTemplate(databaseName, schemaName);
+    Assert.assertNotNull(jdbcTemplate);
+    Assert.assertEquals("decrept-token", ((HikariDataSource) jdbcTemplate.getDataSource()).getDataSourceProperties().get("token"));
   }
 
   @Test
@@ -107,100 +169,13 @@ public class JDBCTemplatesTest extends AbstractTestBase {
       dataSource.addDataSourceProperty("authenticator", "test");
       dataSource.setMinimumIdle(1);
       dataSource.setMaximumPoolSize(5);
-      this.template = new JdbcTemplate(dataSource);
+      this.template = new ClosableJdbcTemplate(dataSource);
     }
 
     when(jdbcTemplateCache.get(eq(databaseName + schemaName))).thenReturn(template);
-
-    EncryptedData encryptedDataMock = mock(EncryptedData.class);
-
-    Map mapMock = mock(HashMap.class);
-    // setting the first part of the if condition in main method true
-    when(oauthCredentials.getOauthMap()).thenReturn(mapMock);
-    when(mapMock.get("accessToken")).thenReturn(encryptedDataMock);
-    // setting ciphertext to empty to make the second part of the if condition in main
-    // method false
-    when(encryptedDataMock.getCiphertext()).thenReturn("");
-    when(tokenRefreshService.refreshToken()).thenReturn(new TokenResponse());
-    when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("accessToken");
-
     JdbcTemplate jdbcTemplate = jdbcTemplates.getOrCreateJdbcTemplate(databaseName, schemaName);
     Assert.assertNotNull(jdbcTemplate);
     Assert.assertEquals("test-url", ((HikariDataSource) jdbcTemplate.getDataSource()).getJdbcUrl());
     Assert.assertEquals(5, ((HikariDataSource) jdbcTemplate.getDataSource()).getMaximumPoolSize());
-  }
-
-  @Test
-  public void testSetJdbcTemplateCacheHasDataScenario1() {
-    String databaseName = "new_database";
-    String schemaName = "test_schema";
-    try (HikariDataSource dataSource =
-        DataSourceBuilder.create()
-            .type(HikariDataSource.class)
-            .url("test")
-            .driverClassName(
-                "net.snowflake.client.jdbc.SnowflakeDriver")
-            .build()) {
-
-      dataSource.addDataSourceProperty("db", databaseName);
-      dataSource.addDataSourceProperty("schema", schemaName);
-      dataSource.addDataSourceProperty("authenticator", "test");
-      dataSource.setMinimumIdle(1);
-      dataSource.setMaximumPoolSize(5);
-      this.template = new JdbcTemplate(dataSource);
-    }
-    when(jdbcTemplateCache.get(eq(databaseName + schemaName)))
-        .thenReturn(template); // Simulate cache miss
-    EncryptedData encryptedDataMock = mock(EncryptedData.class);
-
-    Map mapMock = mock(HashMap.class);
-    // setting the first part of the if condition in main method true
-    when(oauthCredentials.getOauthMap()).thenReturn(mapMock);
-    when(mapMock.get("accessToken")).thenReturn(encryptedDataMock);
-    // setting ciphertext to return some value to make the second part of the if condition in main
-    // method true
-    when(encryptedDataMock.getCiphertext()).thenReturn("access-token-value");
-
-    when(tokenRefreshService.refreshToken()).thenReturn(new TokenResponse());
-    when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("accessToken");
-
-    // Call the method under test
-    jdbcTemplates.getOrCreateJdbcTemplate(databaseName, schemaName);
-    EasyCache<String, JdbcTemplate> actualJdbcTemplate =
-        (EasyCache<String, JdbcTemplate>)
-            ReflectionTestUtils.getField(jdbcTemplates, "jdbcTemplateCache");
-    Assert.assertNotNull(actualJdbcTemplate);
-  }
-
-  @Test
-  public void testSetJdbcTemplateCacheHasDataAndTokenIsNull() {
-    String databaseName = "new_database";
-    String schemaName = "test_schema";
-    try (HikariDataSource dataSource =
-        DataSourceBuilder.create()
-            .type(HikariDataSource.class)
-            .url("test")
-            .driverClassName(
-                "net.snowflake.client.jdbc.SnowflakeDriver")
-            .build()) {
-
-      dataSource.addDataSourceProperty("db", databaseName);
-      dataSource.addDataSourceProperty("schema", schemaName);
-      dataSource.addDataSourceProperty("authenticator", "test");
-      dataSource.setMinimumIdle(1);
-      dataSource.setMaximumPoolSize(5);
-      this.template = new JdbcTemplate(dataSource);
-    }
-    when(jdbcTemplateCache.get(eq(databaseName + schemaName)))
-        .thenReturn(template); // Simulate cache miss
-
-    EncryptedData encryptedDataMock = mock(EncryptedData.class);
-    Map mapMock = mock(HashMap.class);
-    when(oauthCredentials.getOauthMap()).thenReturn(mapMock);
-    when(mapMock.get("accessToken")).thenReturn(encryptedDataMock);
-    when(encryptedDataMock.getCiphertext()).thenReturn("access-token-value");
-    when(tokenRefreshService.refreshToken()).thenReturn(new TokenResponse());
-    when(encryptDecryptValues.decryptValue(any(EncryptedData.class))).thenReturn("accessToken");
-    jdbcTemplates.getOrCreateJdbcTemplate(databaseName, schemaName);
   }
 }

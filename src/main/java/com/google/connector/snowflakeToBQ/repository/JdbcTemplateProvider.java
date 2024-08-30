@@ -57,7 +57,7 @@ public class JdbcTemplateProvider {
   private final TokenRefreshService tokenRefreshService;
   private final OAuthCredentials oauthCredentials;
   private final EncryptValues encryptDecryptValues;
-  private final EasyCache<String, JdbcTemplate> jdbcTemplateCache;
+  private final EasyCache<String, ClosableJdbcTemplate> jdbcTemplateCache;
 
   @Value("${jdbc.url}")
   private String url;
@@ -70,7 +70,7 @@ public class JdbcTemplateProvider {
       TokenRefreshService tokenRefreshService,
       OAuthCredentials oauthCredentials,
       EncryptValues encryptDecryptValues,
-      EasyCache<String, JdbcTemplate> jdbcTemplateCache) {
+      EasyCache<String, ClosableJdbcTemplate> jdbcTemplateCache) {
     this.tokenRefreshService = tokenRefreshService;
     this.oauthCredentials = oauthCredentials;
     this.encryptDecryptValues = encryptDecryptValues;
@@ -78,7 +78,7 @@ public class JdbcTemplateProvider {
   }
 
   /**
-   * Retrieves or creates a JDBC template for the specified database and schema.
+   * Retrieves or creates a closable JDBC template for the specified database and schema.
    *
    * <p>This method checks the cache for an existing {@link JdbcTemplate} for the given database
    * name. If one is not found, a new {@link JdbcTemplate} is created with the provided database and
@@ -94,9 +94,9 @@ public class JdbcTemplateProvider {
    */
   public JdbcTemplate getOrCreateJdbcTemplate(String databaseName, String schemaName) {
     String cacheKey = databaseName + schemaName;
-    JdbcTemplate jdbcTemplate = jdbcTemplateCache.get(cacheKey);
+    ClosableJdbcTemplate closableJdbcTemplate = jdbcTemplateCache.get(cacheKey);
     // Create and cache a new JdbcTemplate if not found in cache
-    if (jdbcTemplate == null) {
+    if (closableJdbcTemplate == null) {
       HikariDataSource dataSource =
           DataSourceBuilder.create()
               .type(HikariDataSource.class)
@@ -117,11 +117,10 @@ public class JdbcTemplateProvider {
       String decryptedToken =
           encryptDecryptValues.decryptValue(oauthCredentials.getOauthMap().get("accessToken"));
       dataSource.addDataSourceProperty("token", decryptedToken);
-      jdbcTemplate = new JdbcTemplate(dataSource);
-
-      jdbcTemplateCache.put(cacheKey, jdbcTemplate);
+      closableJdbcTemplate = new ClosableJdbcTemplate(dataSource);
+      jdbcTemplateCache.put(cacheKey, closableJdbcTemplate);
     }
 
-    return jdbcTemplate;
+    return closableJdbcTemplate;
   }
 }

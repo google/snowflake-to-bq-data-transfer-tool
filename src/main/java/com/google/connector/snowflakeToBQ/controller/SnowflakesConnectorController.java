@@ -27,6 +27,7 @@ import com.google.connector.snowflakeToBQ.model.datadto.SnowflakeUnloadToGCSData
 import com.google.connector.snowflakeToBQ.model.request.SFDataMigrationRequestDTO;
 import com.google.connector.snowflakeToBQ.model.request.SFExtractAndTranslateDDLRequestDTO;
 import com.google.connector.snowflakeToBQ.model.request.SnowflakeUnloadToGCSRequestDTO;
+import com.google.connector.snowflakeToBQ.repository.ClosableJdbcTemplate;
 import com.google.connector.snowflakeToBQ.service.ApplicationConfigDataService;
 import com.google.connector.snowflakeToBQ.service.ExtractAndTranslateDDLService;
 import com.google.connector.snowflakeToBQ.service.SnowflakeMigrateDataService;
@@ -65,7 +66,7 @@ public class SnowflakesConnectorController {
 
   final OAuthCredentials oauthCredentials;
 
-  final EasyCache<String, JdbcTemplate> jdbcTemplateEhcache;
+  final EasyCache<String, ClosableJdbcTemplate> jdbcTemplateEhcache;
 
   public SnowflakesConnectorController(
       EncryptValues encryptValues,
@@ -75,7 +76,7 @@ public class SnowflakesConnectorController {
       ExtractAndTranslateDDLService extractDDLService,
       SnowflakeUnloadToGCSAsyncService snowflakeUnloadToGCSAsyncService,
       ApplicationConfigDataService applicationConfigDataService,
-      EasyCache<String, JdbcTemplate> jdbcTemplateEhcache) {
+      EasyCache<String, ClosableJdbcTemplate> jdbcTemplateEhcache) {
     this.encryptValues = encryptValues;
     this.tokenRefreshService = tokenRefreshService;
     this.snowflakeMigrateDataService = snowflakeMigrateDataService;
