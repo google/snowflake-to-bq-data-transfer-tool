@@ -18,6 +18,7 @@ package com.google.connector.snowflakeToBQ.service;
 
 import com.google.connector.snowflakeToBQ.base.AbstractTestBase;
 import com.google.connector.snowflakeToBQ.config.OAuthCredentials;
+import com.google.connector.snowflakeToBQ.config.WebClientConfig;
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
 import com.google.connector.snowflakeToBQ.model.EncryptedData;
 import com.google.connector.snowflakeToBQ.util.CommonMethods;
@@ -41,7 +42,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 public class RestAPIExecutionServiceTest extends AbstractTestBase {
   @Autowired private RestAPIExecutionService restAPIExecutionService;
 
-  @MockBean WebClient webClientMock;
+  @MockBean
+  WebClientConfig webClientConfigMock;
   @MockBean OAuthCredentials oauthCredentials;
   @MockBean EncryptValues encryptDecryptValues;
   @MockBean TokenRefreshService tokenRefreshService;
@@ -76,6 +78,8 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
     // Define the expected argument values for the method chain
     String expectedUrl = "https://testing.snowflakecomputing.com/api/v2/statements/";
     // Stub the behavior of the WebClient instance and its method chain
+    WebClient webClientMock=Mockito.mock(WebClient.class);
+    Mockito.when(webClientConfigMock.webClient()).thenReturn(webClientMock);
     Mockito.when(webClientMock.get()).thenReturn(requestHeadersUriSpecMock);
     Mockito.when(requestHeadersUriSpecMock.uri(anyString())).thenReturn(requestHeadersSpecMock);
     Mockito.when(requestHeadersSpecMock.header(Mockito.eq("Authorization"), anyString()))
@@ -126,6 +130,8 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
     // Define the expected argument values for the method chain
     String expectedUrl = "https://testing.snowflakecomputing.com/api/v2/statements/";
     // Stub the behavior of the WebClient instance and its method chain
+    WebClient webClientMock=Mockito.mock(WebClient.class);
+    Mockito.when(webClientConfigMock.webClient()).thenReturn(webClientMock);
     Mockito.when(webClientMock.get()).thenReturn(requestHeadersUriSpecMock);
     Mockito.when(requestHeadersUriSpecMock.uri(anyString())).thenReturn(requestHeadersSpecMock);
     Mockito.when(requestHeadersSpecMock.header(Mockito.eq("Authorization"), anyString()))
@@ -182,6 +188,8 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
     String expectedUrl = "https://testing.snowflakecomputing.com/api/v2/statements/";
 
     // Stub the behavior of the WebClient instance and its method chain
+    WebClient webClientMock=Mockito.mock(WebClient.class);
+    Mockito.when(webClientConfigMock.webClient()).thenReturn(webClientMock);
     Mockito.when(webClientMock.get()).thenReturn(requestHeadersUriSpecMock);
     Mockito.when(requestHeadersUriSpecMock.uri(anyString())).thenReturn(requestHeadersSpecMock);
     Mockito.when(requestHeadersSpecMock.header(Mockito.eq("Authorization"), anyString()))
@@ -251,7 +259,10 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
     // Define the expected argument values for the method chain
     String expectedUrl = "https://testing.snowflakecomputing.com/api/v2/statements/";
     // Stub the behavior of the WebClient instance and its method chain
+    WebClient webClientMock=Mockito.mock(WebClient.class);
+    Mockito.when(webClientConfigMock.webClient()).thenReturn(webClientMock);
     Mockito.when(webClientMock.get()).thenReturn(requestHeadersUriSpecMock);
+
     Mockito.when(requestHeadersUriSpecMock.uri(anyString())).thenReturn(requestHeadersSpecMock);
     Mockito.when(requestHeadersSpecMock.header(Mockito.eq("Authorization"), anyString()))
         .thenReturn(requestHeadersSpecMock);
@@ -289,7 +300,10 @@ public class RestAPIExecutionServiceTest extends AbstractTestBase {
     // Define the expected argument values for the method chain
     String expectedUrl = "https://testing.snowflakecomputing.com/api/v2/statements/";
     // Stub the behavior of the WebClient instance and its method chain
+    WebClient webClientMock=Mockito.mock(WebClient.class);
+    Mockito.when(webClientConfigMock.webClient()).thenReturn(webClientMock);
     Mockito.when(webClientMock.get()).thenReturn(requestHeadersUriSpecMock);
+
     Mockito.when(requestHeadersUriSpecMock.uri(anyString())).thenReturn(requestHeadersSpecMock);
     Mockito.when(requestHeadersSpecMock.header(Mockito.eq("Authorization"), anyString()))
         .thenReturn(requestHeadersSpecMock);

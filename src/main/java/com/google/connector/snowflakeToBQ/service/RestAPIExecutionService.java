@@ -22,14 +22,14 @@ import static com.google.connector.snowflakeToBQ.util.ErrorCode.SNOWFLAKE_REST_A
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.connector.snowflakeToBQ.config.OAuthCredentials;
+import com.google.connector.snowflakeToBQ.config.WebClientConfig;
 import com.google.connector.snowflakeToBQ.exception.SnowflakeConnectorException;
 import com.google.connector.snowflakeToBQ.model.response.SnowflakeResponse;
+import com.google.connector.snowflakeToBQ.util.encryption.EncryptValues;
+import io.grpc.netty.shaded.io.netty.channel.unix.Errors;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-
-import com.google.connector.snowflakeToBQ.util.encryption.EncryptValues;
-import io.grpc.netty.shaded.io.netty.channel.unix.Errors;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +40,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
@@ -56,7 +55,7 @@ public class RestAPIExecutionService {
 
   private static final Logger log = LoggerFactory.getLogger(RestAPIExecutionService.class);
 
-  final WebClient webClient;
+  private final WebClientConfig webClientConfig;
   private final OAuthCredentials oauthCredentials;
   private final EncryptValues encryptDecryptValues;
   private final TokenRefreshService tokenRefreshService;
@@ -68,11 +67,11 @@ public class RestAPIExecutionService {
   private int snowflakeRestAPIPollDuration;
 
   public RestAPIExecutionService(
-      WebClient webClient,
       OAuthCredentials oauthCredentials,
       EncryptValues encryptDecryptValues,
-      TokenRefreshService tokenRefreshService) {
-    this.webClient = webClient;
+      TokenRefreshService tokenRefreshService,
+      WebClientConfig webClientConfig) {
+    this.webClientConfig = webClientConfig;
     this.oauthCredentials = oauthCredentials;
     this.encryptDecryptValues = encryptDecryptValues;
     this.tokenRefreshService = tokenRefreshService;
@@ -106,7 +105,8 @@ public class RestAPIExecutionService {
     checkAndRefreshToken();
     String accessToken =
         encryptDecryptValues.decryptValue(oauthCredentials.getOauthMap().get("accessToken"));
-    return webClient
+    return webClientConfig
+        .webClient()
         .method(HttpMethod.POST)
         .uri(url)
         .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -171,7 +171,8 @@ public class RestAPIExecutionService {
     checkAndRefreshToken();
     String accessToken =
         encryptDecryptValues.decryptValue(oauthCredentials.getOauthMap().get("accessToken"));
-    return webClient
+    return webClientConfig
+        .webClient()
         .get()
         .uri(url + statementHandle)
         // Setting the authorization token

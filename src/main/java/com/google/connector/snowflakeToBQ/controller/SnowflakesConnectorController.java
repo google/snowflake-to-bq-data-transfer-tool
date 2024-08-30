@@ -27,6 +27,7 @@ import com.google.connector.snowflakeToBQ.model.datadto.SnowflakeUnloadToGCSData
 import com.google.connector.snowflakeToBQ.model.request.SFDataMigrationRequestDTO;
 import com.google.connector.snowflakeToBQ.model.request.SFExtractAndTranslateDDLRequestDTO;
 import com.google.connector.snowflakeToBQ.model.request.SnowflakeUnloadToGCSRequestDTO;
+import com.google.connector.snowflakeToBQ.repository.ClosableJdbcTemplate;
 import com.google.connector.snowflakeToBQ.service.ApplicationConfigDataService;
 import com.google.connector.snowflakeToBQ.service.ExtractAndTranslateDDLService;
 import com.google.connector.snowflakeToBQ.service.SnowflakeMigrateDataService;
@@ -65,6 +66,8 @@ public class SnowflakesConnectorController {
 
   final OAuthCredentials oauthCredentials;
 
+  final EasyCache<String, ClosableJdbcTemplate> jdbcTemplateEhcache;
+
   public SnowflakesConnectorController(
       EncryptValues encryptValues,
       TokenRefreshService tokenRefreshService,
@@ -72,7 +75,8 @@ public class SnowflakesConnectorController {
       OAuthCredentials oauthCredentials,
       ExtractAndTranslateDDLService extractDDLService,
       SnowflakeUnloadToGCSAsyncService snowflakeUnloadToGCSAsyncService,
-      ApplicationConfigDataService applicationConfigDataService) {
+      ApplicationConfigDataService applicationConfigDataService,
+      EasyCache<String, ClosableJdbcTemplate> jdbcTemplateEhcache) {
     this.encryptValues = encryptValues;
     this.tokenRefreshService = tokenRefreshService;
     this.snowflakeMigrateDataService = snowflakeMigrateDataService;
@@ -80,6 +84,7 @@ public class SnowflakesConnectorController {
     this.extractDDLService = extractDDLService;
     this.snowflakeUnloadToGCSAsyncService = snowflakeUnloadToGCSAsyncService;
     this.applicationConfigDataService = applicationConfigDataService;
+    this.jdbcTemplateEhcache = jdbcTemplateEhcache;
   }
 
   /**
@@ -257,6 +262,7 @@ public class SnowflakesConnectorController {
     // execution. Using the below line, when user set the new value it will be refreshed, so the map
     // will  contain  the new access token value.
     tokenRefreshService.refreshToken();
+    jdbcTemplateEhcache.clear();
     String message =
         String.format(
             "OAUTH credentials have been successfully saved at %s,Request Log Id:%s",
